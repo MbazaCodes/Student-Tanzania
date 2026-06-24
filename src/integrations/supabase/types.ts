@@ -794,6 +794,7 @@ export const Constants = {
       ],
       payment_status: ["pending", "paid", "failed", "cancelled"],
       school_type: [
+        "Pre-School / Nursery",
         "Primary School",
         "Secondary School",
         "University / College",

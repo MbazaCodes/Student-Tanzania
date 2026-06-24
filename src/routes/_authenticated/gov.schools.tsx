@@ -16,7 +16,7 @@ import type { Database } from "@/integrations/supabase/types";
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
 
 type SchoolType = Database["public"]["Enums"]["school_type"];
-const SCHOOL_TYPES: SchoolType[] = ["Primary School", "Secondary School", "University / College", "Vocational Training", "Special Needs School"];
+const SCHOOL_TYPES: SchoolType[] = ["Pre-School / Nursery", "Primary School", "Secondary School", "University / College", "Vocational Training", "Special Needs School"];
 const TZ_REGIONS = ["Arusha","Dar es Salaam","Dodoma","Geita","Iringa","Kagera","Katavi","Kigoma","Kilimanjaro","Lindi","Manyara","Mara","Mbeya","Morogoro","Mtwara","Mwanza","Njombe","Pemba North","Pemba South","Pwani","Rukwa","Ruvuma","Shinyanga","Simiyu","Singida","Songwe","Tabora","Tanga","Unguja North","Unguja South","Zanzibar"];
 
 const REGION_PREFIX: Record<string, string> = { "Dar es Salaam":"DS", Arusha:"AR", Mbeya:"MB", Dodoma:"DO", Mwanza:"MW", Tanga:"TG", Morogoro:"MO", Kagera:"KG", Kigoma:"KI", Lindi:"LD", Mara:"MR", Mtwara:"MT", Pwani:"PW", Rukwa:"RK", Shinyanga:"SH", Singida:"SG", Tabora:"TB", Geita:"GT", Katavi:"KV", Njombe:"NJ", Simiyu:"SM", Songwe:"SW" };
