@@ -30,3 +30,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables — never commit these
+.env
+.env.*
+!.env.example
+
+# Remove duplicate lockfile (using bun)
+package-lock.json
+-e 
+# Dev utility scripts
+Fix-TsidMigrations.ps1
+*.ps1

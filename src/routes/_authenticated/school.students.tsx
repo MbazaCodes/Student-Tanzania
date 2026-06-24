@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Copy } from "lucide-react";
-import { generateTsidNo, sha256Hex } from "@/lib/tsid";
+import { generateTsidNo, hashPassword } from "@/lib/tsid";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/school/students")({ component: Page });
@@ -125,7 +125,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
     e.preventDefault();
     if (!fullname || !dob || !level) { toast.error("Full name, DOB and level are required."); return; }
     setLoading(true);
-    const hash = await sha256Hex(password);
+    const hash = await hashPassword(password);
     const { error } = await supabase.from("students").insert({
       tsid, fullname, dob, gender,
       nationality, level,

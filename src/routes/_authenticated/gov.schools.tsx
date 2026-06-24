@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { useState } from "react";
 import { Plus, BadgeCheck, BadgeX, Copy } from "lucide-react";
-import { sha256Hex } from "@/lib/tsid";
+import { hashPassword } from "@/lib/tsid";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
@@ -142,7 +142,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
       toast.error("Fill all required fields."); return;
     }
     setLoading(true);
-    const hash = await sha256Hex(password);
+    const hash = await hashPassword(password);
     const { error } = await supabase.from("schools").insert({
       code, name, type, region, district, ward,
       address: address || null,
