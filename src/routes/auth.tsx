@@ -8,10 +8,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ASSETS, roleHome, type Role } from "@/lib/tsid";
 import { toast } from "sonner";
-import { Eye, EyeOff, ShieldCheck, GraduationCap, Building2 } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Building2 } from "lucide-react";
 
 const searchSchema = z.object({ role: z.enum(["admin","gov","school","student"]).optional() });
 export const Route = createFileRoute("/auth")({ validateSearch: searchSchema, component: AuthPage });
+
+/** Per-role icon — coat of arms for gov, building for school, cap for student */
+function RoleIcon({ role, size = 22, active = false }: { role: Role; size?: number; active?: boolean }) {
+  if (role === "gov" || role === "admin") {
+    return (
+      <img
+        src="/tz-coat-of-arms.svg"
+        alt="Tanzania Coat of Arms"
+        style={{
+          width: size, height: size,
+          objectFit: "contain",
+          filter: active
+            ? "brightness(1.4) drop-shadow(0 0 5px rgba(255,255,255,.6))"
+            : "brightness(1) saturate(0.8)",
+          transition: "filter .15s",
+        }}
+      />
+    );
+  }
+  if (role === "school") return <Building2 style={{ width: size, height: size }} />;
+  return <GraduationCap style={{ width: size, height: size }} />;
+}
 
 function AuthPage() {
   const { role: defaultRole } = Route.useSearch();
@@ -23,11 +45,11 @@ function AuthPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const ROLE_DEFS: Record<Role, { label: string; desc: string; icon: typeof ShieldCheck }> = {
-    admin:   { label: "Admin",          desc: "System administrator",                     icon: ShieldCheck },
-    gov:     { label: t("role_gov"),     desc: t("role_gov_desc"),     icon: ShieldCheck },
-    school:  { label: t("role_school"),  desc: t("role_school_desc"),  icon: Building2 },
-    student: { label: t("role_student"), desc: t("role_student_desc"), icon: GraduationCap },
+  const ROLE_DEFS: Record<Role, { label: string; desc: string }> = {
+    admin:   { label: "Admin",          desc: "System administrator" },
+    gov:     { label: t("role_gov"),     desc: t("role_gov_desc") },
+    school:  { label: t("role_school"),  desc: t("role_school_desc") },
+    student: { label: t("role_student"), desc: t("role_student_desc") },
   };
 
   useEffect(() => {
@@ -54,6 +76,10 @@ function AuthPage() {
     navigate({ to: roleHome(actualRole), replace: true });
   }
 
+  const roleColor: Record<Role, string> = {
+    admin: "#003366", gov: "#003366", school: "#1B8F3A", student: "#007AFF",
+  };
+
   return (
     <div className="auth-grid" style={{ minHeight: "100vh", display: "grid" }}>
       <style>{`
@@ -79,11 +105,7 @@ function AuthPage() {
           <img
             src={ASSETS.logo}
             alt="TSID"
-            style={{
-              width: 112, height: 112,
-              objectFit: "contain",
-              filter: "drop-shadow(0 4px 12px rgba(0,51,102,.15))",
-            }}
+            style={{ width: 112, height: 112, objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,51,102,.15))" }}
           />
           <div>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 24, color: "#003366", letterSpacing: -0.5, lineHeight: 1 }}>TSID</div>
@@ -93,33 +115,52 @@ function AuthPage() {
 
         {/* Main message */}
         <div>
-          <h1 style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
-            color: "#003366",
-            lineHeight: 1.2,
-            marginBottom: 20,
-          }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "clamp(1rem, 1.5vw, 1.25rem)", color: "#003366", lineHeight: 1.2, marginBottom: 20 }}>
             {t("auth_subtitle")}
           </h1>
 
-          {/* Role list */}
+          {/* Role list with dynamic icons */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {(["gov","school","student"] as Role[]).map((r) => {
               const M = ROLE_DEFS[r];
+              const isActive = selectedRole === r;
+              const color = roleColor[r];
               return (
-                <div key={r} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  key={r}
+                  onClick={() => setSelectedRole(r)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "10px 12px", borderRadius: 12, cursor: "pointer",
+                    background: isActive ? `${color}10` : "transparent",
+                    border: `1.5px solid ${isActive ? color : "transparent"}`,
+                    transition: "all .15s",
+                  }}
+                >
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    background: "#003366",
+                    width: 40, height: 40, borderRadius: 10,
+                    background: isActive ? color : "#e2e8f0",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
+                    flexShrink: 0, transition: "background .15s",
+                    overflow: "hidden",
                   }}>
-                    <M.icon style={{ width: 18, height: 18, color: "#fff" }} />
+                    {r === "gov" ? (
+                      <img
+                        src="/tz-coat-of-arms.svg"
+                        alt=""
+                        style={{
+                          width: 26, height: 26, objectFit: "contain",
+                          filter: isActive ? "brightness(1.3)" : "saturate(0.5) brightness(0.7)",
+                        }}
+                      />
+                    ) : r === "school" ? (
+                      <Building2 style={{ width: 20, height: 20, color: isActive ? "#fff" : "#64748b" }} />
+                    ) : (
+                      <GraduationCap style={{ width: 20, height: 20, color: isActive ? "#fff" : "#64748b" }} />
+                    )}
                   </div>
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: 12, color: "#003366" }}>{M.label}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: isActive ? color : "#003366" }}>{M.label}</span>
                     <span style={{ fontSize: 12, color: "#64748b" }}> — {M.desc}</span>
                   </div>
                 </div>
@@ -130,7 +171,7 @@ function AuthPage() {
 
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src={ASSETS.coat} alt="" style={{ width: 28, height: 28, opacity: 0.5 }} />
+          <img src={ASSETS.coat} alt="" style={{ width: 28, height: 28, opacity: 0.6 }} />
           <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Jamhuri ya Muungano wa Tanzania</span>
         </div>
       </div>
@@ -138,12 +179,8 @@ function AuthPage() {
       {/* ── RIGHT: blue login panel ───────────────────────────────── */}
       <div className="auth-right" style={{
         background: "linear-gradient(145deg, #003366 0%, #004f99 60%, #0a6aad 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 32px",
-        position: "relative",
-        overflow: "hidden",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "40px 32px", position: "relative", overflow: "hidden",
       }}>
         {/* Decorative circles */}
         <div style={{ position: "absolute", top: -60, right: -60, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,.04)", pointerEvents: "none" }} />
@@ -152,19 +189,14 @@ function AuthPage() {
         <div style={{ width: "100%", maxWidth: 420, position: "relative", zIndex: 1 }}>
 
           {/* Title */}
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 800, fontSize: 24,
-            color: "#fff",
-            marginBottom: 8, letterSpacing: -0.3,
-          }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 24, color: "#fff", marginBottom: 8, letterSpacing: -0.3 }}>
             {t("auth_title")}
           </h2>
           <p style={{ fontSize: 12, color: "rgba(255,255,255,.65)", marginBottom: 24 }}>
             {t("auth_subtitle")}
           </p>
 
-          {/* Role selector */}
+          {/* Role selector buttons */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 28 }}>
             {(["gov","school","student"] as Role[]).map((r) => {
               const M = ROLE_DEFS[r];
@@ -175,16 +207,24 @@ function AuthPage() {
                   type="button"
                   onClick={() => setSelectedRole(r)}
                   style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-                    padding: "12px 8px", borderRadius: 12,
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                    padding: "14px 8px", borderRadius: 12,
                     border: `2px solid ${active ? "#fff" : "rgba(255,255,255,.2)"}`,
-                    background: active ? "rgba(255,255,255,.15)" : "rgba(255,255,255,.05)",
+                    background: active ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.05)",
                     color: active ? "#fff" : "rgba(255,255,255,.55)",
                     cursor: "pointer", fontSize: 12, fontWeight: active ? 700 : 500,
                     transition: "all .15s",
                   }}
                 >
-                  <M.icon style={{ width: 18, height: 18 }} />
+                  {/* Icon area */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8,
+                    background: active ? "rgba(255,255,255,.2)" : "rgba(255,255,255,.07)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "background .15s",
+                  }}>
+                    <RoleIcon role={r} size={20} active={active} />
+                  </div>
                   {M.label}
                 </button>
               );
@@ -207,9 +247,7 @@ function AuthPage() {
                 style={{
                   background: "rgba(255,255,255,.12)",
                   border: "1.5px solid rgba(255,255,255,.2)",
-                  color: "#fff",
-                  height: 48,
-                  fontSize: 14,
+                  color: "#fff", height: 48, fontSize: 14,
                 }}
                 className="placeholder:text-white/40 focus:border-white/50"
               />
@@ -230,10 +268,7 @@ function AuthPage() {
                   style={{
                     background: "rgba(255,255,255,.12)",
                     border: "1.5px solid rgba(255,255,255,.2)",
-                    color: "#fff",
-                    height: 48,
-                    paddingRight: 44,
-                    fontSize: 14,
+                    color: "#fff", height: 48, paddingRight: 44, fontSize: 14,
                   }}
                   className="placeholder:text-white/40 focus:border-white/50"
                 />
@@ -243,8 +278,7 @@ function AuthPage() {
                   aria-label={showPass ? "Hide password" : "Show password"}
                   style={{
                     position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
-                    background: "none", border: "none", cursor: "pointer",
-                    color: "rgba(255,255,255,.55)",
+                    background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,.55)",
                   }}
                 >
                   {showPass ? <EyeOff style={{ width: 17, height: 17 }} /> : <Eye style={{ width: 17, height: 17 }} />}
@@ -256,16 +290,9 @@ function AuthPage() {
               type="submit"
               disabled={loading}
               style={{
-                background: "#fff",
-                color: "#003366",
-                fontWeight: 800,
-                height: 50,
-                fontSize: 15,
-                borderRadius: 12,
-                marginTop: 4,
-                border: "none",
-                boxShadow: "0 4px 20px rgba(0,0,0,.18)",
-                transition: "opacity .15s",
+                background: "#fff", color: "#003366", fontWeight: 800,
+                height: 50, fontSize: 15, borderRadius: 12, marginTop: 4,
+                border: "none", boxShadow: "0 4px 20px rgba(0,0,0,.18)", transition: "opacity .15s",
               }}
               className="hover:opacity-90"
             >

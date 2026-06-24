@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="200" height="133">
+  <!-- Green triangle top-left -->
+  <polygon points="0,0 450,0 0,300" fill="#1EB53A"/>
+  <!-- Blue triangle bottom-right -->
+  <polygon points="900,300 450,600 900,600" fill="#00A3DD"/>
+  <!-- Black diagonal band with yellow borders -->
+  <polygon points="0,0 900,600 900,540 60,0" fill="#FCD116"/>
+  <polygon points="0,60 840,600 900,600 0,0" fill="#FCD116"/>
+  <polygon points="0,60 840,600 780,600 0,0" fill="#1A1A1A"/>
+</svg>
