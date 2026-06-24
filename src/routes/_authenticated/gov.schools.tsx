@@ -11,15 +11,262 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Plus, BadgeCheck, BadgeX, Copy } from "lucide-react";
 import { hashPassword } from "@/lib/tsid";
-import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
 
-type SchoolType = Database["public"]["Enums"]["school_type"];
-const SCHOOL_TYPES: SchoolType[] = ["Pre-School / Nursery", "Primary School", "Secondary School", "University / College", "Vocational Training", "Special Needs School"];
-const TZ_REGIONS = ["Arusha","Dar es Salaam","Dodoma","Geita","Iringa","Kagera","Katavi","Kigoma","Kilimanjaro","Lindi","Manyara","Mara","Mbeya","Morogoro","Mtwara","Mwanza","Njombe","Pemba North","Pemba South","Pwani","Rukwa","Ruvuma","Shinyanga","Simiyu","Singida","Songwe","Tabora","Tanga","Unguja North","Unguja South","Zanzibar"];
+type SchoolType = string;
 
-const REGION_PREFIX: Record<string, string> = { "Dar es Salaam":"DS", Arusha:"AR", Mbeya:"MB", Dodoma:"DO", Mwanza:"MW", Tanga:"TG", Morogoro:"MO", Kagera:"KG", Kigoma:"KI", Lindi:"LD", Mara:"MR", Mtwara:"MT", Pwani:"PW", Rukwa:"RK", Shinyanga:"SH", Singida:"SG", Tabora:"TB", Geita:"GT", Katavi:"KV", Njombe:"NJ", Simiyu:"SM", Songwe:"SW" };
+const SCHOOL_TYPES: SchoolType[] = [
+  "Pre-School / Nursery",
+  "Primary School",
+  "Secondary School",
+  "University / College",
+  "Vocational Training",
+  "Special Needs School",
+];
+
+// Tanzania Regions → Districts → Wards
+const TZ_GEO: Record<string, Record<string, string[]>> = {
+  "Arusha": {
+    "Arusha CC": ["Elerai","Engutoto","Kati","Kimandolu","Levolosi","Muriet","Nessuit","Ngarenaro","Olasiti","Sekei","Sokon I","Sokon II","Themi","Unga Limited","Uwanja wa Ndege"],
+    "Arusha DC": ["Bwawani","Ilkiurei","Kimnyaki","Kiranyi","Kiserian","Lekitatu","Maroroni","Mlangarini","Moshono","Mwandet","Nduruma","Ngarenanyuki","Oldonyosambu","Olmolog","Oltrumet","Osunyai","Poli","Qarus","Seliani","Sura","Tml"],
+    "Karatu": ["Buger","Endabash","Endamaghang","Galappo","Karatu","Kilimatembo","Kansay","Mangola","Mbulumbulu","Quiloto","Rhotia","Tloma"],
+    "Longido": ["Gelai Bomba","Gelai Lumbwa","Kimokouwa","Lengijave","Matale","Mifugo","Mundarara","Naberera","Ngereyani","Oltepesi","Orng'arwa","Pakasi","Tingatinga"],
+    "Monduli": ["Engare Nairobi","Esilalei","Lolkisale","Makuyuni","Manyara","Monduli","Monduli Juu","Mto wa Mbu","Naitolia","Selela"],
+    "Ngorongoro": ["Alailelai","Digodigo","Endulen","Kakesio","Loosoito","Maaloni","Malambo","Mateves","Nainokanoka","Ndutu","Ng'iresi","Ngorongoro","Olbalbal","Oloirien","Olpiro","Olyoirobi","Piyaya","Sale"],
+  },
+  "Dar es Salaam": {
+    "Ilala MC": ["Buguruni","Chang'ombe","Charambe","Gerezani","Ilala","Jangwani","Kariakoo","Kisutu","Kitunda","Kivukoni","Mchikichini","Msongola","Mtambani","Vingunguti"],
+    "Kinondoni MC": ["Bonyokwa","Bunju","Goba","Kawe","Kibamba","Kigogo","Kijitonyama","Kinondoni","Kunduchi","Kwembe","Mabibo","Magomeni","Makuburi","Makurumla","Manzese","Mbezi","Mburahati","Mwananyamala","Ndugumbi","Oysterbay","Tandale","Ubungo","Wazo"],
+    "Temeke MC": ["Azimio","Chamazi","Chang'ombe","Charambe","Keko","Kibondemaji","Kigamboni","Kurasini","Mbagala","Mjimwema","Mtoni","Pemba Mnazi","Sandali","Somangira","Temeke","Toangoma","Tupendane","Yombo Vituka"],
+    "Ubungo MC": ["Goba","Kibamba","Kimara","Kwembe","Mbezi","Saranga","Sinza","Ubungo"],
+    "Kigamboni MC": ["Kigamboni","Kibondemaji","Mjimwema","Somangira","Tuangoma","Kibamba"],
+  },
+  "Dodoma": {
+    "Dodoma CC": ["Chalinze","Chang'ombe","Dodoma Urban","Ipagala","Kikuyu","Kikombo","Kilimani","Kisasa","Makole","Makorora","Mbwanga","Msalato","Mtumba","Muungano","Nzuguni"],
+    "Bahi": ["Bahi","Chipanga","Handali","Ikoja","Ilolo","Itiso","Kibakwe","Kigwe","Makang'wa","Mbalawala","Mpamantwa","Msisi","Mundemu"],
+    "Chamwino": ["Buigiri","Chamwino","Chipanga","Galigali","Ikowa","Ihumwa","Ipala","Isanga","Makutopora","Matumbulu","Nala","Nzasa","Seriani"],
+    "Kondoa": ["Bereko","Bolisa","Bumbuta","Haubi","Itololo","Kiberashi","Kikore","Kinango","Kolo","Kondoa","Lalaji","Masange","Mondo","Mrijo Chini"],
+    "Mpwapwa": ["Berege","Chipogoro","Chunyu","Godegode","Kibakwe","Kifimbo","Mima","Mpwapwa","Rudi","Wotta"],
+  },
+  "Geita": {
+    "Geita TC": ["Butimba","Geita","Ilemela","Kalangalala","Katoro","Lubaga"],
+    "Bukombe": ["Bukombe","Iponjola","Ushirombo","Uswagwa"],
+    "Chato": ["Bwanga","Chato","Ilemela","Katoro","Murutunguru"],
+    "Mbogwe": ["Bulyanhulu","Iyenze","Karumo","Mbogwe","Nyangh'wale"],
+    "Nyang'hwale": ["Idukilo","Mwingiro","Nyang'hwale","Nyantira"],
+  },
+  "Iringa": {
+    "Iringa MC": ["Idodi","Ifunda","Ilula","Iringa Urban","Kalenga","Kilolo","Mafinga","Mtwivila","Nduli","Pawaga","Tosamaganga"],
+    "Iringa DC": ["Idodi","Ifunda","Kalenga","Kilolo","Mafinga","Mtwivila","Nduli","Pawaga"],
+    "Kilolo": ["Idete","Kilolo","Kimala","Kiponzelo","Magulilwa","Mahenge","Mfrikano","Mseke","Munisagara","Mwembe","Tagamenda","Uhafiwa"],
+    "Mufindi": ["Ifwagi","Igomaa","Ikangaivwi","Imalinyi","Kasanga","Mafinga","Mbalamaziwa","Mdabulo","Mgololo","Mtwango","Mufindi","Ruaha"],
+  },
+  "Kagera": {
+    "Bukoba MC": ["Bukoba","Butuja","Hamugembe","Kahororo","Kibeta","Korera","Lugalo","Maruku","Nyakishaka"],
+    "Bukoba DC": ["Butayunja","Kabirizi","Katerero","Kibuyuni","Kyamulaile","Maruku","Nshamba","Rubale","Ruhunga"],
+    "Biharamulo": ["Biharamulo","Bukiriro","Buyaga","Kayenzi","Lusahunga","Muganza","Murutunguru","Nyantakara","Runazi"],
+    "Karagwe": ["Bugomora","Bweranyange","Ihembe","Iyobozi","Kayanga","Kerenge","Kibale","Kituntu","Maruku","Murongo"],
+    "Kyerwa": ["Bugomora","Chonyonyo","Kaisho","Kanoni","Mataba","Murongo","Nyakabanga","Nyakayanja","Ruziba"],
+    "Misenyi": ["Bunazi","Kabango","Kafunzo","Kakunyu","Kashai","Kyaka","Minziro","Rulenge"],
+    "Muleba": ["Buhendangabo","Bujugo","Bubeke","Bwanjai","Ibuga","Ijumbi","Kagoma","Kasharu","Kibingo","Muleba","Nshamba","Nyabionza"],
+    "Ngara": ["Benaco","Bugarama","Kasulo","Kibimba","Kinazi","Muganza","Murongo","Nkora","Rulenge","Rusumo"],
+  },
+  "Katavi": {
+    "Mpanda MC": ["Kakese","Mpanda","Inyonga","Mishamo"],
+    "Mpanda DC": ["Inyonga","Karema","Kipili","Laela","Mishamo","Mpanda","Nsimbo"],
+    "Mlele": ["Katumba","Mamba","Mlele","Mpanda","Nsimba"],
+  },
+  "Kigoma": {
+    "Kigoma-Ujiji MC": ["Gungu","Kagera","Kigoma","Nkuruma","Remera","Ujiji"],
+    "Buhigwe": ["Buhigwe","Muyama","Nguruka","Uvinza"],
+    "Kakonko": ["Kakonko","Kasanda","Mugunzu","Nyamtukuza","Rugongwe"],
+    "Kasulu": ["Kasulu","Kibondo","Manyovu","Murgwanza","Nyarugusu"],
+    "Kibondo": ["Kibondo","Kumsenga","Mugunzu","Nyarugusu","Rugombo"],
+    "Kigoma DC": ["Buhingu","Kigoma","Kigoma Kasimba","Mwandiga","Ujiji"],
+    "Uvinza": ["Ilagala","Igalula","Simbo","Uvinza","Vikonge"],
+  },
+  "Kilimanjaro": {
+    "Moshi MC": ["Kaloleni","Kiboriloni","Kimanthi","Longuo A","Longuo B","Mawenzi","Mjini","Rau","Shantytown","Soweto"],
+    "Hai": ["Bomang'ombe","Boma la Ng'ombe","Machame","Masama","Mbokomu","Moshi","Nkuu","Old Moshi","Sanya Juu"],
+    "Moshi DC": ["Kirua Vunjo","Longuo","Mamba","Moshi","Old Moshi","Uru","Vunjo"],
+    "Mwanga": ["Kihurio","Lembeni","Mwanga","Ngujini","Rundugai","Same"],
+    "Rombo": ["Boro","Holili","Keni","Kiboriloni","Mkuu","Rombo","Useri"],
+    "Same": ["Chome","Goha","Hedaru","Kihurio","Kisiwani","Lembeni","Makanya","Mamba","Same","Toloha"],
+    "Siha": ["Kishisha","Longuo","Sanya","Siha","Soko"],
+  },
+  "Lindi": {
+    "Lindi MC": ["Lindi","Chikundi","Mitwero","Ndoro","Rasbura"],
+    "Kilwa": ["Kilwa Kisiwani","Kilwa Kivinje","Kilwa Masoko","Nangurukuru","Njinjo","Nkowe","Somanga"],
+    "Lindi DC": ["Chikonji","Kiranjeranje","Lindi","Mandawa","Mnolela","Mtama","Mwenge","Nyangao"],
+    "Liwale": ["Liwale","Nalasi","Nawenge","Ngarama","Ngongowele"],
+    "Nachingwea": ["Chimbuko","Kilimarondo","Mahiwa","Nachingwea","Naikiu","Nanganga","Namalenga","Ruponda"],
+    "Ruangwa": ["Chienjere","Mlawe","Nandonde","Nanganga","Ruangwa","Rushwa"],
+  },
+  "Manyara": {
+    "Babati TC": ["Babati","Dareda","Gallapo","Madunga","Managhat","Mwada","Ndalat","Ufana"],
+    "Babati DC": ["Bashnet","Dabil","Dareda","Gallapo","Gichameda","Haraa","Magugu","Magungu","Managhat","Mbuguni","Mwada","Ndalat","Seloto"],
+    "Hanang": ["Basotu","Dabil","Endasak","Gawal","Gidahababieg","Hirbadaw","Katesh","Mureru","Nangwa","Simbay"],
+    "Kiteto": ["Dosidosi","Engusero","Kibaya","Kimotorok","Laiseri","Lengatei","Ngorika","Songambele"],
+    "Mbulu": ["Balaaa","Daudi","Dongobesh","Gehandu","Hadza","Haydom","Ilkiushu","Karatu","Labay","Maretadu","Mbulu","Seloto"],
+    "Simanjiro": ["Emboret","Kimotorok","Loiborsireet","Makuyuni","Msitu wa Tembo","Naberera","Ngage","Ngurunit","Nkoaranga","Orkesumet","Sukuro"],
+  },
+  "Mara": {
+    "Musoma MC": ["Buhare","Iringo","Makoko","Mugango","Musoma","Nyakato","Nyamagana"],
+    "Butiama": ["Butiama","Kisangura","Komarera","Kyandege","Mugeta","Nyichoka","Rorya"],
+    "Musoma DC": ["Bunda","Kiabakari","Mugumo","Musoma","Nyakanga","Obulangeti","Roche"],
+    "Rorya": ["Kowak","Mchauru","Mugango","Nyamwaga","Rorya","Shirati"],
+    "Serengeti": ["Mugumu","Nata","Nyamuma","Robanda","Isenye","Mbiso"],
+    "Tarime": ["Borega","Gorong'a","Kemathe","Kerende","Kiserogota","Nyansincha","Sirari","Tarime","Turwa"],
+  },
+  "Mbeya": {
+    "Mbeya CC": ["Forest","Iyela","Jacaranda","Kalobe","Lwanjilo","Mbeya","Mwanjelwa","Nsalaga","Sisimba","Uyole"],
+    "Busokelo": ["Ipinda","Kabula","Lufilyo","Masoko","Ngosi","Rungwe"],
+    "Chunya": ["Chunya","Ifumbo","Lupa","Mtanila","Ngwala","Songwe"],
+    "Mbarali": ["Chimala","Igurusi","Itagata","Mbarali","Rujewa","Utengule Usongwe"],
+    "Mbeya DC": ["Inyala","Iwindi","Lufubu","Mbeya","Mwansekwa","Nsalaga","Ulenje"],
+    "Rungwe": ["Ibula","Isongole","Kiwira","Makwale","Mwakaleli","Nkuka","Rungwe","Tukuyu"],
+  },
+  "Morogoro": {
+    "Morogoro MC": ["Bigwa","Bonde","Chamwino","Kilakala","Kichangani","Kihonda","Kingolwira","Kiroka","Mazimbu","Mji Mkuu","Mwembesongo","Sabasaba","Saba Saba"],
+    "Gairo": ["Gairo","Idibo","Ilakala","Itiso","Nongwe","Rudewa","Ulaya"],
+    "Ifakara": ["Ifakara","Igima","Katindiuka","Lupiro","Minepa","Mlimba"],
+    "Kilosa": ["Dumila","Kilosa","Kimamba","Mikumi","Msowero","Rudewa","Ulaya"],
+    "Kilombero": ["Ifakara","Mwaya","Sanje"],
+    "Malinyi": ["Malinyi","Mbogo","Mlimba"],
+    "Morogoro DC": ["Kiroka","Mzumbe","Ngerengere","Mkuyuni","Mvomero"],
+    "Mvomero": ["Hembeti","Kibati","Kigugu","Mziha","Turiani"],
+    "Ulanga": ["Kilosa","Lupiro","Mahenge","Malinyi","Msogezi","Vigoi"],
+  },
+  "Mtwara": {
+    "Mtwara-Mikindani MC": ["Chikongola","Mtwara","Mikindani","Shangani","Magomeni"],
+    "Masasi": ["Chiwale","Chiungutwa","Luchelegwa","Masasi","Mbua","Mchauru","Mihambwe","Mtama","Nanyamba","Ruponda"],
+    "Mtwara DC": ["Dihimba","Kitangari","Lulindi","Mkomaindo","Namanga","Ntomoko","Rwelu"],
+    "Nanyumbu": ["Lukuledi","Mkangala","Nanyumbu","Naumbu","Ntomoko"],
+    "Newala": ["Chichiwe","Mahuta","Namikupa","Newala","Ntomoko","Ntwari","Pemba"],
+    "Tandahimba": ["Chiponda","Luchelegwa","Mkomaindo","Mnacho","Namikupa","Nanyamba","Tandahimba"],
+  },
+  "Mwanza": {
+    "Mwanza CC": ["Bugando","Buswelu","Butimba","Igogo","Ilemela","Kirumba","Kitangiri","Lwanhima","Mbugani","Mkuyuni","Nyamagana","Pamba","Pasiansi","Shibula"],
+    "Ilemela MC": ["Bugando","Ilemela","Kirumba","Lwanhima","Mkuyuni","Nyamagana","Shibula"],
+    "Kwimba": ["Bupamwa","Dutwa","Hungumalwa","Kikoa","Lubiri","Magu","Nkome","Sumve"],
+    "Magu": ["Kabila","Lubiri","Magu","Nyigamba","Shishiyu","Sumve"],
+    "Misungwi": ["Igokelo","Kijima","Magu","Misungwi","Ngudu","Nyamilama"],
+    "Sengerema": ["Busisi","Igara","Nyampande","Nyehunge","Sengerema"],
+    "Ukerewe": ["Bwiro","Kagunguli","Murutunguru","Namagondo","Nkilizya","Ukara","Ukerewe"],
+  },
+  "Njombe": {
+    "Njombe TC": ["Njombe","Igagala","Imalinyi","Lupembe","Makambako"],
+    "Ludewa": ["Ludewa","Manda","Mlangali","Mkiu","Iyayi"],
+    "Makete": ["Bulongwa","Iwela","Kindamba","Makete","Mapanda"],
+    "Njombe DC": ["Igagala","Imalinyi","Lupembe","Makambako","Njombe"],
+    "Wanging'ombe": ["Imalinyi","Igima","Mdandu","Ulembwe","Wanging'ombe"],
+  },
+  "Pemba North": {
+    "Micheweni": ["Chambani","Konde","Maziwa Ng'ombe","Mgogoni","Micheweni","Njuguni","Wingwi"],
+    "Wete": ["Gando","Kinyasini","Kojani","Maziwa Ng'ombe","Ole","Pujini","Wete"],
+  },
+  "Pemba South": {
+    "Chake Chake": ["Chake Chake","Madungu","Makombeni","Mchanga Mdogo","Pujini","Vitongoji","Ziwani"],
+    "Mkoani": ["Chole","Kengeja","Kichunguu","Kiuyu","Mkoani","Ole","Pujini","Wawi"],
+  },
+  "Pwani": {
+    "Bagamoyo": ["Bagamoyo","Dunda","Kaole","Kerege","Kiromo","Miono","Msata","Zinga"],
+    "Kibaha TC": ["Kibaha","Kwala","Mlandizi","Msata"],
+    "Kibaha DC": ["Kibaha","Mlandizi","Msata","Ruvu"],
+    "Kisarawe": ["Kisewe","Kisarawe","Kurui","Makurunge","Mtamba","Vikumburu"],
+    "Mafia": ["Bweni","Jibondo","Juani","Kilindoni","Kirongwe","Kiegeani"],
+    "Mkuranga": ["Kibiti","Mkuranga","Msanga","Mtawanya","Vikindu"],
+    "Rufiji": ["Ikwiriri","Kibiti","Mohoro","Mwaseni","Nyamisati","Utete"],
+  },
+  "Rukwa": {
+    "Sumbawanga MC": ["Ilemba","Kala","Katazi","Kipande","Kirando","Nkundi","Sumbawanga"],
+    "Kalambo": ["Kirando","Laela","Matai","Ninde","Nkweto","Nzovwe","Titye"],
+    "Nkasi": ["Chala","Ilemba","Kirando","Nkasi","Wampembe"],
+    "Sumbawanga DC": ["Chapota","Ilemba","Katazi","Kipande","Sumbawanga","Nkundi"],
+  },
+  "Ruvuma": {
+    "Songea MC": ["Mfaranyaki","Mji Mpya","Mjimwema","Songea","Ruhuwiko"],
+    "Mbinga": ["Kigonsera","Litembo","Mbamba Bay","Mbinga","Mkongo","Mtiri","Muungano"],
+    "Namtumbo": ["Gumbiro","Kihagara","Madaba","Namtumbo","Namabengo"],
+    "Nyasa": ["Liuli","Mbamba Bay","Mkenda","Mkongo","Nyasa"],
+    "Songea DC": ["Gumbiro","Kigonsera","Madaba","Songea","Ruhuwiko"],
+    "Tunduru": ["Nakapanya","Nalasi","Namtumbo","Tunduru"],
+  },
+  "Shinyanga": {
+    "Shinyanga MC": ["Kambarage","Kizumbi","Lubaga","Malagarasi","Mjini","Sabasaba","Shinyanga"],
+    "Kahama TC": ["Isaka","Kahama","Kaseme","Mwakitolyo","Nzega"],
+    "Kahama DC": ["Bugarama","Isaka","Kahama","Lunguya","Masunga","Ndolage","Nzega","Salawe"],
+    "Kishapu": ["Ihanda","Kishapu","Mwamapalala","Mwanangwa","Ndagalu","Tinde"],
+    "Shinyanga DC": ["Ikungu","Kambarage","Mwadui","Samuye","Utemini","Usanda"],
+  },
+  "Simiyu": {
+    "Bariadi TC": ["Bariadi","Isanga","Lalago","Mwabayanda","Mwanjolo"],
+    "Bariadi DC": ["Bariadi","Isanga","Lalago","Mwabayanda","Mwanjolo","Nguliguli"],
+    "Busega": ["Badi","Busega","Dutwa","Lugata","Maliti","Mwamashimba"],
+    "Itilima": ["Bariadi","Itilima","Mwanhuzi","Ntuzu","Seke"],
+    "Maswa": ["Gumali","Isaka","Kinangiri","Malampaka","Maswa","Mwanhuzi","Nguliguli"],
+    "Meatu": ["Dutwa","Mwabayanda","Mwanjolo","Nkula","Nguliguli","Tinde"],
+  },
+  "Singida": {
+    "Singida MC": ["Iguguno","Ikungi","Ilongero","Isimani","Puna","Singida"],
+    "Ikungi": ["Iguguno","Ikungi","Ilongero","Isimani","Mungaa","Nkinto"],
+    "Iramba": ["Iguguno","Iramba","Kiomboi","Mwanga","Ntuntu"],
+    "Manyoni": ["Itigi","Kintinku","Manyoni","Mkwese","Nkinto","Sanjaranda"],
+    "Singida DC": ["Ilongero","Isimani","Mungaa","Puma","Singida","Unyihe"],
+  },
+  "Songwe": {
+    "Momba": ["Chinya","Ivuna","Kapele","Kaseye","Momba","Ndaga"],
+    "Mbozi": ["Ihanda","Isangati","Kayula","Mbozi","Mlowo","Nteba","Vwawa"],
+    "Songwe": ["Mlowo","Songwe","Vwawa"],
+    "Tunduma TC": ["Lupa","Manda","Mlowo","Tunduma"],
+  },
+  "Tabora": {
+    "Tabora MC": ["Cheyo","Gongoni","Ipuli","Isevya","Kampisakatoto","Kanyenye","Mtendeni","Ng'ambo","Tumbi"],
+    "Igunga": ["Igunga","Igurubi","Mwanzugi","Ndevelwa","Nzega"],
+    "Kaliua": ["Inyonga","Kaliua","Kamsamba","Ukumbi"],
+    "Nzega": ["Itobo","Ndevelwa","Nzega","Puge"],
+    "Sikonge": ["Igalula","Itigi","Sikonge","Mwese"],
+    "Tabora DC": ["Cheyo","Kampisakatoto","Kanyenye","Tumbi","Utemini"],
+    "Urambo": ["Ichemba","Kaliua","Ulyankulu","Urambo"],
+    "Uyui": ["Igalula","Isevya","Itembo","Mbugwe","Uyui"],
+  },
+  "Tanga": {
+    "Tanga CC": ["Chumbageni","Duga","Makorora","Marungu","Maweni","Mzingani","Ngamiani","Pongwe","Rangi","Tanga"],
+    "Handeni": ["Handeni","Kwamasimba","Kideleko","Misozwe","Mgambo","Sindeni"],
+    "Kilindi": ["Handeni","Kigombe","Kilindi","Lushoto","Mgambo"],
+    "Korogwe TC": ["Korogwe","Makorora","Maweni","Mazinde"],
+    "Korogwe DC": ["Bungu","Korogwe","Magamba","Maweni","Mazinde","Mkumbara"],
+    "Lushoto": ["Gare","Lushoto","Magamba","Mlalo","Mtae","Soni","Sunga"],
+    "Mkinga": ["Daluni","Kasera","Mkinga","Muungano","Ngomeni"],
+    "Muheza": ["Amani","Maramba","Mkinga","Muheza","Ndola","Tongwe"],
+    "Pangani": ["Bweni","Kabuku","Kipumbwi","Mkwaja","Pangani","Ushongo"],
+  },
+  "Unguja North": {
+    "Kaskazini A": ["Donge","Kijini","Mkwajuni","Nungwi","Tumbatu"],
+    "Kaskazini B": ["Matemwe","Mkwajuni","Pwani Mchangani","Tumbatu"],
+  },
+  "Unguja South": {
+    "Kusini": ["Chwaka","Fumba","Kibele","Kiongoni","Koani","Muyuni","Paje","Uzini"],
+    "Kati": ["Bwejuu","Charawe","Dunga","Chwaka","Mkokotoni","Muyuni"],
+  },
+  "Zanzibar": {
+    "Mjini": ["Fundo","Gulioni","Kikwajuni","Kisiwandui","Kivunge","Magogoni","Mchangani","Mchauru","Mji Mkongwe","Mlandege","Ng'ambo","Shangani","Stone Town","Vikokotoni"],
+    "Magharibi A": ["Bububu","Fuoni","Imbomba","Kizenga","Mwanakwerekwe","Mwera","Tumbe"],
+    "Magharibi B": ["Chuini","Fuoni","Imbomba","Kiembe Samaki","Mwanakwerekwe","Tumbe"],
+  },
+};
+
+const REGION_PREFIX: Record<string, string> = {
+  "Dar es Salaam":"DS","Arusha":"AR","Mbeya":"MB","Dodoma":"DO","Mwanza":"MW",
+  "Tanga":"TG","Morogoro":"MO","Kagera":"KG","Kigoma":"KI","Lindi":"LD",
+  "Mara":"MR","Mtwara":"MT","Pwani":"PW","Rukwa":"RK","Shinyanga":"SH",
+  "Singida":"SG","Tabora":"TB","Geita":"GT","Katavi":"KV","Njombe":"NJ",
+  "Simiyu":"SM","Songwe":"SW","Ruvuma":"RV","Iringa":"IR","Kilimanjaro":"KL",
+  "Manyara":"MY","Pemba North":"PN","Pemba South":"PS","Unguja North":"UN",
+  "Unguja South":"US","Zanzibar":"ZB",
+};
+
 function genCode(region: string) {
   const prefix = REGION_PREFIX[region] ?? region.slice(0,2).toUpperCase();
   return `${prefix}${Math.floor(1000 + Math.random()*9000)}`;
@@ -117,23 +364,34 @@ function Page() {
 }
 
 function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState<SchoolType>("Secondary School");
-  const [region, setRegion] = useState("");
+  const [name, setName]         = useState("");
+  const [type, setType]         = useState<SchoolType>("Primary School");
+  const [region, setRegion]     = useState("");
   const [district, setDistrict] = useState("");
-  const [ward, setWard] = useState("");
-  const [address, setAddress] = useState("");
-  const [contact, setContact] = useState("");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [ward, setWard]         = useState("");
+  const [address, setAddress]   = useState("");
+  const [contact, setContact]   = useState("");
+  const [email, setEmail]       = useState("");
+  const [code, setCode]         = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState(genPassword());
-  const [loading, setLoading] = useState(false);
-  const [issued, setIssued] = useState<{ code: string; username: string; password: string } | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [issued, setIssued]     = useState<{ code: string; username: string; password: string } | null>(null);
 
-  function autoFill(r: string) {
-    if (r && !code) setCode(genCode(r));
-    if (!username) setUsername(name.toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,30) || "school" + Math.random().toString(36).slice(2,6));
+  // Derived cascades
+  const districts = region ? Object.keys(TZ_GEO[region] ?? {}) : [];
+  const wards     = (region && district) ? (TZ_GEO[region]?.[district] ?? []) : [];
+
+  function onRegionChange(r: string) {
+    setRegion(r);
+    setDistrict("");
+    setWard("");
+    if (!code) setCode(genCode(r));
+  }
+
+  function onDistrictChange(d: string) {
+    setDistrict(d);
+    setWard("");
   }
 
   async function submit(e: React.FormEvent) {
@@ -183,41 +441,89 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
   return (
     <form onSubmit={submit} className="space-y-4 py-2">
       <div className="grid grid-cols-2 gap-3">
+
+        {/* Institution Type */}
         <div className="col-span-2 space-y-1.5">
           <Label>Institution Type *</Label>
-          <Select value={type} onValueChange={(v) => setType(v as SchoolType)}>
+          <Select value={type} onValueChange={(v) => setType(v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{SCHOOL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {SCHOOL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
           </Select>
         </div>
+
+        {/* School Name */}
         <div className="col-span-2 space-y-1.5">
           <Label>School Name *</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
-        <div className="space-y-1.5">
+
+        {/* Region */}
+        <div className="col-span-2 space-y-1.5">
           <Label>Region *</Label>
-          <Select value={region} onValueChange={(v) => { setRegion(v); autoFill(v); }}>
+          <Select value={region} onValueChange={onRegionChange}>
             <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
-            <SelectContent>{TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {Object.keys(TZ_GEO).sort().map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>District *</Label><Input value={district} onChange={(e) => setDistrict(e.target.value)} required /></div>
-        <div className="space-y-1.5"><Label>Ward *</Label><Input value={ward} onChange={(e) => setWard(e.target.value)} required /></div>
+
+        {/* District — only enabled after region selected */}
+        <div className="space-y-1.5">
+          <Label>District *</Label>
+          <Select value={district} onValueChange={onDistrictChange} disabled={!region}>
+            <SelectTrigger>
+              <SelectValue placeholder={region ? "Select district" : "Select region first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Ward — only enabled after district selected */}
+        <div className="space-y-1.5">
+          <Label>Ward *</Label>
+          <Select value={ward} onValueChange={setWard} disabled={!district}>
+            <SelectTrigger>
+              <SelectValue placeholder={district ? "Select ward" : "Select district first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {wards.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Address & Contact */}
         <div className="space-y-1.5"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+255 7XX XXX XXX" /></div>
-        <div className="space-y-1.5"><Label>Contact Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        <div className="col-span-2 space-y-1.5"><Label>Contact Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
       </div>
+
+      {/* Credentials */}
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
         <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">🔑 Admin Credentials</div>
         <div className="grid grid-cols-3 gap-3">
-          <div className="space-y-1.5"><Label>School Code *</Label><Input className="font-mono font-bold" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MW1234" required /></div>
-          <div className="space-y-1.5"><Label>Username *</Label><Input value={username} onChange={(e) => setUsername(e.target.value)} required /></div>
-          <div className="space-y-1.5"><Label>Password *</Label><Input className="font-mono" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+          <div className="space-y-1.5">
+            <Label>School Code *</Label>
+            <Input className="font-mono font-bold" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MW1234" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Username *</Label>
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Password *</Label>
+            <Input className="font-mono" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => { setCode(region ? genCode(region) : ""); setPassword(genPassword()); }}>
+        <Button type="button" variant="outline" size="sm" onClick={() => { if (region) setCode(genCode(region)); setPassword(genPassword()); }}>
           ↻ Regenerate
         </Button>
       </div>
+
       <Button type="submit" className="w-full bg-primary" disabled={loading}>
         {loading ? "Registering…" : "🏫 Register School"}
       </Button>
