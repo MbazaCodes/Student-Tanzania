@@ -42,3 +42,6 @@ package-lock.json
 # Dev utility scripts
 Fix-TsidMigrations.ps1
 *.ps1
+-e 
+# Lovable scaffold metadata (removed)
+.lovable/
