@@ -18,7 +18,7 @@ function RoleIcon({ role, size = 22, active = false }: { role: Role; size?: numb
   if (role === "gov" || role === "admin") {
     return (
       <img
-        src="/tz-coat-of-arms.svg"
+        src="/tz-coat-of-arms.png"
         alt="Tanzania Coat of Arms"
         style={{
           width: size, height: size,
@@ -146,7 +146,7 @@ function AuthPage() {
                   }}>
                     {r === "gov" ? (
                       <img
-                        src="/tz-coat-of-arms.svg"
+                        src="/tz-coat-of-arms.png"
                         alt=""
                         style={{
                           width: 26, height: 26, objectFit: "contain",
