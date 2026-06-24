@@ -151,7 +151,7 @@ function CardFront({ data, qr }: { data: IdCardData; qr: string }) {
             TANZANIA STUDENT<br />IDENTIFICATION SYSTEM
           </div>
         </div>
-        <TzFlagSVG w={40} h={27} />
+        <img src={ASSETS.logo} alt="TSID" style={{ width: 38, height: 38, objectFit: "contain", flexShrink: 0 }} />
       </header>
 
       {/* ── PROFILE SECTION ───────────────────────────────────────────── */}
