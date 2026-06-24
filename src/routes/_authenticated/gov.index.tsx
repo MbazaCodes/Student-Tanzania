@@ -17,7 +17,7 @@ function GovDashboard() {
     queryFn: async () => {
       const [students, schools, apps, active, logs] = await Promise.all([
         supabase.from("students").select("tsid",{count:"exact",head:true}),
-        supabase.from("schools").select("code",{count:"exact",head:true}),
+        supabase.from("schools").select("school_code",{count:"exact",head:true}),
         supabase.from("applications").select("id",{count:"exact",head:true}).eq("status","pending"),
         supabase.from("students").select("tsid",{count:"exact",head:true}).eq("status","active"),
         supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(6),
@@ -25,7 +25,7 @@ function GovDashboard() {
       return { students: students.count??0, schools: schools.count??0, apps: apps.count??0, active: active.count??0, recentLogs: logs.data??[] };
     },
   });
-  const { data: schoolsData=[] } = useQuery({ queryKey:["gov-schools-dash"], queryFn: async()=>(await supabase.from("schools").select("code,name,region,status").order("name").limit(5)).data??[] });
+  const { data: schoolsData=[] } = useQuery({ queryKey:["gov-schools-dash"], queryFn: async()=>(await supabase.from("schools").select("school_code,school_name,region,status").order("school_name").limit(5)).data??[] });
   const { data: regionData=[] } = useQuery({ queryKey:["gov-regions"], queryFn: async()=>{
     const {data:st}=await supabase.from("students").select("region");
     const {data:sc}=await supabase.from("schools").select("region");
@@ -89,9 +89,9 @@ function GovDashboard() {
               <tr><th className="px-4 py-2 text-left">{t("col_code")}</th><th className="px-4 py-2 text-left">{t("col_school")}</th><th className="px-4 py-2 text-left">{t("col_region")}</th><th className="px-4 py-2 text-left">{t("col_status")}</th></tr>
             </thead><tbody>
               {schoolsData.map((s)=>(
-                <tr key={s.code} className="border-t">
-                  <td className="px-4 py-2 font-mono text-xs text-primary font-bold">{s.code}</td>
-                  <td className="px-4 py-2 font-medium">{s.name}</td>
+                <tr key={s.school_code} className="border-t">
+                  <td className="px-4 py-2 font-mono text-xs text-primary font-bold">{s.school_code}</td>
+                  <td className="px-4 py-2 font-medium">{s.school_name}</td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">{s.region??"—"}</td>
                   <td className="px-4 py-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status==="active"?"bg-emerald-100 text-emerald-800":"bg-amber-100 text-amber-800"}`}>{s.status==="active"?t("active"):t("pending")}</span></td>
                 </tr>

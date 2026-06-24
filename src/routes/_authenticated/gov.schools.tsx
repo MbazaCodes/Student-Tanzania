@@ -282,12 +282,12 @@ function Page() {
 
   const { data: schools = [] } = useQuery({
     queryKey: ["gov-schools"],
-    queryFn: async () => (await supabase.from("schools").select("code,name,type,region,district,ward,cred_username,status").order("name")).data ?? [],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status").order("school_name")).data ?? [],
   });
 
   async function toggleStatus(code: string, currentStatus: string) {
     const next = currentStatus === "active" ? "suspended" : "active";
-    const { error } = await supabase.from("schools").update({ status: next }).eq("code", code);
+    const { error } = await supabase.from("schools").update({ status: next }).eq("school_code", code);
     if (error) toast.error(error.message);
     else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["gov-schools"] }); }
   }
@@ -335,9 +335,9 @@ function Page() {
             </thead>
             <tbody>
               {schools.map((s) => (
-                <tr key={s.code} className="border-t hover:bg-muted/20">
-                  <td className="px-4 py-3 font-mono text-xs text-primary font-bold">{s.code}</td>
-                  <td className="px-4 py-3"><div className="font-semibold">{s.name}</div><div className="text-xs text-muted-foreground">{s.type}</div></td>
+                <tr key={s.school_code} className="border-t hover:bg-muted/20">
+                  <td className="px-4 py-3 font-mono text-xs text-primary font-bold">{s.school_code}</td>
+                  <td className="px-4 py-3"><div className="font-semibold">{s.school_name}</div><div className="text-xs text-muted-foreground">{s.type}</div></td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{s.region}{s.district ? ` · ${s.district}` : ""}</td>
                   <td className="px-4 py-3 font-mono text-xs">{s.cred_username}</td>
                   <td className="px-4 py-3">
@@ -346,7 +346,7 @@ function Page() {
                       : <span className="inline-flex items-center gap-1 text-muted-foreground text-xs"><BadgeX className="h-3.5 w-3.5" /> {s.status}</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="outline" onClick={() => toggleStatus(s.code, s.status)}>
+                    <Button size="sm" variant="outline" onClick={() => toggleStatus(s.school_code, s.status)}>
                       {s.status === "active" ? "Suspend" : "Activate"}
                     </Button>
                   </td>
@@ -402,9 +402,9 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
     setLoading(true);
     const hash = await hashPassword(password);
     const { error } = await supabase.from("schools").insert({
-      code, name, type, region, district, ward,
+      school_code: code, school_name: name, type, region, district, ward,
       address: address || null,
-      contact: contact || null,
+      phone: contact || null,
       email: email || null,
       cred_username: username, cred_password: hash, status: "active",
     });

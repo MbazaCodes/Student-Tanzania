@@ -31,7 +31,7 @@ function Page() {
   const { data: school } = useQuery({
     enabled: !!me.schoolCode,
     queryKey: ["school", me.schoolCode],
-    queryFn: async () => (await supabase.from("schools").select("*").eq("code", me.schoolCode!).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("schools").select("*").eq("school_code", me.schoolCode!).maybeSingle()).data,
   });
 
   const { data: students = [] } = useQuery({
@@ -51,7 +51,7 @@ function Page() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Student Database</h1>
-          <p className="text-sm text-muted-foreground">{students.length} student{students.length !== 1 ? "s" : ""}{school ? ` · ${school.name}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{students.length} student{students.length !== 1 ? "s" : ""}{school ? ` · ${school.school_name}` : ""}</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -129,7 +129,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
     const { error } = await supabase.from("students").insert({
       tsid, fullname, dob, gender,
       nationality, level,
-      school_code: school.code, school_name: school.name,
+      school_code: school.school_code, school_name: school.school_name,
       region: school.region, district: school.district, ward: school.ward,
       school_contact: school.contact, enrollment_date: enrollmentDate || null,
       blood_group: bloodGroup || null, issue_date: issueDate || null,
@@ -140,7 +140,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
     if (error) { toast.error(error.message); setLoading(false); return; }
     await supabase.from("activity_logs").insert({
       action: "student:register", message: `Registered ${tsid} (${fullname})`,
-      by_name: actorName, by_role: "school", by_ref: school.code,
+      by_name: actorName, by_role: "school", by_ref: school.school_code,
     });
     setLoading(false);
     setIssued({ tsid, username: tsid, password });
@@ -196,7 +196,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
       </div>
       <div className="rounded-xl border bg-muted/30 p-4 text-sm">
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">School (auto)</div>
-        <div className="grid grid-cols-2 gap-2"><div><span className="text-muted-foreground">Name: </span>{school.name}</div><div><span className="text-muted-foreground">Code: </span><span className="font-mono text-primary">{school.code}</span></div><div><span className="text-muted-foreground">Region: </span>{school.region}</div><div><span className="text-muted-foreground">District: </span>{school.district}</div></div>
+        <div className="grid grid-cols-2 gap-2"><div><span className="text-muted-foreground">Name: </span>{school.school_name}</div><div><span className="text-muted-foreground">Code: </span><span className="font-mono text-primary">{school.school_code}</span></div><div><span className="text-muted-foreground">Region: </span>{school.region}</div><div><span className="text-muted-foreground">District: </span>{school.district}</div></div>
       </div>
       <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-3">
         <div className="text-xs font-bold text-blue-800 uppercase tracking-wider">🔑 Login</div>

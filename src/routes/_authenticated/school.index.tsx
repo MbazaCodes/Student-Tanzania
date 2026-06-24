@@ -15,7 +15,7 @@ function Page() {
   const { data: school } = useQuery({
     enabled: !!me.schoolCode,
     queryKey: ["school", me.schoolCode],
-    queryFn: async () => (await supabase.from("schools").select("*").eq("code", me.schoolCode!).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("schools").select("*").eq("school_code", me.schoolCode!).maybeSingle()).data,
   });
 
   const { data: students = [] } = useQuery({
@@ -65,7 +65,7 @@ function Page() {
           </h1>
           <p className="text-sm text-muted-foreground">
             {school?.type}{school?.region ? ` · ${school.region}` : ""}{school?.district ? `, ${school.district}` : ""}
-            {school?.code && <> · Code <span className="font-mono text-foreground">{school.code}</span></>}
+            {school?.code && <> · Code <span className="font-mono text-foreground">{school.school_code}</span></>}
           </p>
         </div>
         <Button asChild className="bg-primary">

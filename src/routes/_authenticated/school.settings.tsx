@@ -11,7 +11,7 @@ function Page() {
   const { data: school } = useQuery({
     enabled: !!me.schoolCode,
     queryKey: ["school-settings", me.schoolCode],
-    queryFn: async () => (await supabase.from("schools").select("*").eq("code", me.schoolCode!).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("schools").select("*").eq("school_code", me.schoolCode!).maybeSingle()).data,
   });
 
   return (
@@ -21,15 +21,15 @@ function Page() {
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">School profile</div>
         {school ? (
           <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div><dt className="text-muted-foreground">Code</dt><dd className="font-mono font-bold text-primary">{school.code}</dd></div>
+            <div><dt className="text-muted-foreground">Code</dt><dd className="font-mono font-bold text-primary">{school.school_code}</dd></div>
             <div><dt className="text-muted-foreground">Username</dt><dd className="font-mono">{school.cred_username}</dd></div>
-            <div className="col-span-2"><dt className="text-muted-foreground">Name</dt><dd className="font-semibold">{school.name}</dd></div>
+            <div className="col-span-2"><dt className="text-muted-foreground">Name</dt><dd className="font-semibold">{school.school_name}</dd></div>
             <div><dt className="text-muted-foreground">Type</dt><dd>{school.type}</dd></div>
             <div><dt className="text-muted-foreground">Status</dt><dd className="capitalize">{school.status}</dd></div>
             <div><dt className="text-muted-foreground">Region</dt><dd>{school.region}</dd></div>
             <div><dt className="text-muted-foreground">District</dt><dd>{school.district}</dd></div>
             <div><dt className="text-muted-foreground">Ward</dt><dd>{school.ward}</dd></div>
-            <div><dt className="text-muted-foreground">Contact</dt><dd>{school.contact_phone ?? "—"}</dd></div>
+            <div><dt className="text-muted-foreground">Contact</dt><dd>{school.phone ?? "—"}</dd></div>
             <div className="col-span-2"><dt className="text-muted-foreground">Address</dt><dd>{school.address ?? "—"}</dd></div>
           </dl>
         ) : <p className="text-sm text-muted-foreground">No school linked.</p>}

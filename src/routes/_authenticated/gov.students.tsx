@@ -12,7 +12,7 @@ function Page() {
   const [search, setSearch] = useState(""); const [regionFilter, setRegionFilter] = useState("");
 
   const { data: students=[] } = useQuery({ queryKey:["gov-students"], queryFn: async()=>(await supabase.from("students").select("tsid,fullname,dob,gender,photo,status,level,region,district,school_code,school_name,created_at").order("created_at",{ascending:false})).data??[] });
-  const { data: schools=[]  } = useQuery({ queryKey:["gov-schools-light"], queryFn: async()=>(await supabase.from("schools").select("code,name,region")).data??[] });
+  const { data: schools=[]  } = useQuery({ queryKey:["gov-schools-light"], queryFn: async()=>(await supabase.from("schools").select("school_code,school_name,region")).data??[] });
 
   const regions=[...new Set(schools.map((s)=>s.region).filter(Boolean))] as string[];
   const filtered=students.filter((st)=>{
