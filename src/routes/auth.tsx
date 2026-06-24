@@ -57,11 +57,15 @@ function AuthPage() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         const uid = data.session.user.id;
-        let role: Role = "student";
-        const { data: adminRow } = await supabase.from("admin_users").select("role").eq("auth_uid", uid).maybeSingle();
-        if (adminRow?.role) {
-          role = adminRow.role as Role;
-        } else {
+        // 1. auth metadata (fastest)
+        let role: Role = (data.session.user.app_metadata?.role as Role) ?? "student";
+        if (role === "student") {
+          // 2. admin_users table
+          const { data: adminRow } = await supabase.from("admin_users").select("role").eq("auth_uid", uid).maybeSingle();
+          if (adminRow?.role) role = adminRow.role as Role;
+        }
+        if (role === "student") {
+          // 3. user_roles table
           const { data: urRow } = await supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle();
           if (urRow?.role) role = urRow.role as Role;
         }
@@ -76,20 +80,24 @@ function AuthPage() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { toast.error(error.message); setLoading(false); return; }
 
-    // 1. Check admin_users (gov/school admins created by superadmin)
-    let actualRole: Role | null = null;
-    const { data: adminRow } = await supabase
-      .from("admin_users").select("role").eq("auth_uid", data.user!.id).maybeSingle();
-    if (adminRow?.role) actualRole = adminRow.role as Role;
+    // 1. Check auth app_metadata (fastest, always available)
+    let actualRole: Role | null = (data.user.app_metadata?.role as Role) ?? null;
 
-    // 2. Fallback: check user_roles table
+    // 2. Fallback: admin_users table
+    if (!actualRole) {
+      const { data: adminRow } = await supabase
+        .from("admin_users").select("role").eq("auth_uid", data.user.id).maybeSingle();
+      if (adminRow?.role) actualRole = adminRow.role as Role;
+    }
+
+    // 3. Fallback: user_roles table
     if (!actualRole) {
       const { data: urRow } = await supabase
-        .from("user_roles").select("role").eq("user_id", data.user!.id).maybeSingle();
+        .from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle();
       if (urRow?.role) actualRole = urRow.role as Role;
     }
 
-    // 3. Final fallback: student
+    // 4. Final fallback
     if (!actualRole) actualRole = "student";
 
     if (actualRole !== selectedRole && !(selectedRole === "gov" && actualRole === "admin")) {

@@ -35,6 +35,7 @@ export function useCurrentUser(): CurrentUser {
         return;
       }
 
+      // 1. Try admin_users table first
       const { data: prof } = await supabase
         .from("admin_users")
         .select("role, ref, name")
@@ -43,7 +44,16 @@ export function useCurrentUser(): CurrentUser {
 
       if (!mounted.current) return;
 
-      const role = (prof?.role as Role | undefined) ?? null;
+      // 2. Fallback to auth app_metadata
+      let role = (prof?.role as Role | undefined) ?? (user.app_metadata?.role as Role | undefined) ?? null;
+
+      // 3. Fallback to user_roles table
+      if (!role) {
+        const { data: urRow } = await supabase
+          .from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+        if (urRow?.role) role = urRow.role as Role;
+      }
+
       const ref = prof?.ref ?? null;
       setState({
         loading: false,
