@@ -56,8 +56,16 @@ function AuthPage() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        const { data: p } = await supabase.from("admin_users").select("role").eq("auth_uid", data.session.user.id).maybeSingle();
-        navigate({ to: roleHome((p?.role as Role) ?? "student"), replace: true });
+        const uid = data.session.user.id;
+        let role: Role = "student";
+        const { data: adminRow } = await supabase.from("admin_users").select("role").eq("auth_uid", uid).maybeSingle();
+        if (adminRow?.role) {
+          role = adminRow.role as Role;
+        } else {
+          const { data: urRow } = await supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle();
+          if (urRow?.role) role = urRow.role as Role;
+        }
+        navigate({ to: roleHome(role), replace: true });
       }
     })();
   }, [navigate]);
@@ -67,8 +75,23 @@ function AuthPage() {
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { toast.error(error.message); setLoading(false); return; }
-    const { data: p } = await supabase.from("admin_users").select("role").eq("auth_uid", data.user!.id).maybeSingle();
-    const actualRole = (p?.role as Role | null) ?? "student";
+
+    // 1. Check admin_users (gov/school admins created by superadmin)
+    let actualRole: Role | null = null;
+    const { data: adminRow } = await supabase
+      .from("admin_users").select("role").eq("auth_uid", data.user!.id).maybeSingle();
+    if (adminRow?.role) actualRole = adminRow.role as Role;
+
+    // 2. Fallback: check user_roles table
+    if (!actualRole) {
+      const { data: urRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", data.user!.id).maybeSingle();
+      if (urRow?.role) actualRole = urRow.role as Role;
+    }
+
+    // 3. Final fallback: student
+    if (!actualRole) actualRole = "student";
+
     if (actualRole !== selectedRole && !(selectedRole === "gov" && actualRole === "admin")) {
       toast.message(`Signed in as "${actualRole}" — redirecting…`);
     }
