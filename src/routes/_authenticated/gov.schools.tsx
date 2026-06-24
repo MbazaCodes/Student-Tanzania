@@ -35,7 +35,7 @@ function Page() {
 
   const { data: schools = [] } = useQuery({
     queryKey: ["gov-schools"],
-    queryFn: async () => (await supabase.from("schools").select("code,name,type,region,district,ward,username,status").order("name")).data ?? [],
+    queryFn: async () => (await supabase.from("schools").select("code,name,type,region,district,ward,cred_username,status").order("name")).data ?? [],
   });
 
   async function toggleStatus(code: string, currentStatus: string) {
@@ -92,7 +92,7 @@ function Page() {
                   <td className="px-4 py-3 font-mono text-xs text-primary font-bold">{s.code}</td>
                   <td className="px-4 py-3"><div className="font-semibold">{s.name}</div><div className="text-xs text-muted-foreground">{s.type}</div></td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{s.region}{s.district ? ` · ${s.district}` : ""}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{s.username}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{s.cred_username}</td>
                   <td className="px-4 py-3">
                     {s.status === "active"
                       ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><BadgeCheck className="h-3.5 w-3.5" /> Active</span>
@@ -148,7 +148,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
       address: address || null,
       contact: contact || null,
       email: email || null,
-      username, password: hash, status: "active",
+      cred_username: username, cred_password: hash, status: "active",
     });
     if (error) { toast.error(error.message); setLoading(false); return; }
     await supabase.from("activity_logs").insert({
