@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /search
+Disallow: /gov
+Disallow: /school
+Disallow: /student
+Disallow: /auth
+
+Sitemap: https://tsid.go.tz/sitemap.xml

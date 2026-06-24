@@ -1,0 +1,20 @@
+{
+  "name": "TSID — Tanzania Student Identification System",
+  "short_name": "TSID",
+  "description": "Official Tanzania Student ID System — issue, verify and manage student identification nationwide.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#003366",
+  "theme_color": "#003366",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    { "src": "/logo192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/tsid-logo.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Verify ID", "short_name": "Verify", "url": "/search", "description": "Verify a student TSID number" },
+    { "name": "Sign in", "short_name": "Login", "url": "/auth", "description": "Sign in to your portal" }
+  ]
+}
