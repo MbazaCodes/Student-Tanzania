@@ -1,0 +1,25 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "outputDirectory": "dist",
+  "builds": [
+    {
+      "src": "dist/server/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "runtime": "nodejs@20.x"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/_assets/(.*)",
+      "dest": "/dist/client/_assets/"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/server/index.js"
+    }
+  ]
+}
