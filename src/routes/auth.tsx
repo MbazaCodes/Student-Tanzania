@@ -77,7 +77,13 @@ function AuthPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    // Students log in with their TSID; convert to the synthetic auth email.
+    let loginEmail = email.trim();
+    if (selectedRole === "student" && /^TSID-/i.test(loginEmail)) {
+      loginEmail = `${loginEmail.toLowerCase().replace(/[^a-z0-9-]/g, "")}@students.tsid.go.tz`;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     if (error) { toast.error(error.message); setLoading(false); return; }
 
     // 1. Check auth app_metadata (fastest, always available)
@@ -266,12 +272,12 @@ function AuthPage() {
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <Label style={{ color: "rgba(255,255,255,.75)", fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block" }}>
-                {t("email_label")}
+                {selectedRole === "student" ? "TSID Number" : t("email_label")}
               </Label>
               <Input
-                type="email"
-                autoComplete="email"
-                placeholder="you@tsid.go.tz"
+                type={selectedRole === "student" ? "text" : "email"}
+                autoComplete={selectedRole === "student" ? "username" : "email"}
+                placeholder={selectedRole === "student" ? "TSID-2026-XXXXXXX" : "you@tsid.go.tz"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

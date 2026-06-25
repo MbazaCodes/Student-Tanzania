@@ -126,23 +126,34 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
     e.preventDefault();
     if (!fullname || !dob || !level) { toast.error("Full name, DOB and level are required."); return; }
     setLoading(true);
-    const hash = await hashPassword(password);
-    const { error } = await supabase.from("students").insert({
-      tsid, fullname, dob, gender,
-      nationality, level,
-      school_code: school.school_code, school_name: school.school_name,
-      region: school.region, district: school.district, ward: school.ward,
-      school_contact: school.contact, enrollment_date: enrollmentDate || null,
-      blood_group: bloodGroup || null, issue_date: issueDate || null,
-      parent_name: parentName || null, parent_nida: parentNida || null,
-      relationship: relationship || null, parent_phone: parentPhone || null,
-      cred_username: tsid, cred_password: hash, status: "active", remarks: [],
+
+    const { data, error } = await supabase.functions.invoke("create-student", {
+      body: {
+        tsid, fullname, dob, gender, nationality, level,
+        school_code: school.school_code, school_name: school.school_name,
+        region: school.region, district: school.district, ward: school.ward,
+        school_contact: school.contact,
+        enrollment_date: enrollmentDate || null,
+        blood_group: bloodGroup || null,
+        issue_date: issueDate || null,
+        parent_name: parentName || null,
+        parent_nida: parentNida || null,
+        relationship: relationship || null,
+        parent_phone: parentPhone || null,
+        password,
+      },
     });
-    if (error) { toast.error(error.message); setLoading(false); return; }
-    await supabase.from("activity_logs").insert({
-      action: "student:register", message: `Registered ${tsid} (${fullname})`,
-      by_name: actorName, by_role: "school", by_ref: school.school_code,
-    });
+
+    if (error) {
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: { body?: unknown } }).context;
+        if (ctx?.body) { const pr = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body; if (pr?.error) msg = pr.error; }
+      } catch { /* keep */ }
+      toast.error(msg); setLoading(false); return;
+    }
+    if (data?.error) { toast.error(data.error); setLoading(false); return; }
+
     setLoading(false);
     setIssued({ tsid, username: tsid, password });
     toast.success(`✅ Student ${tsid} created!`);
@@ -155,7 +166,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
           <div className="font-bold text-emerald-800 mb-3">✅ Student registered</div>
           <div className="space-y-2 font-mono text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">TSID</span><strong className="text-primary">{issued.tsid}</strong></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Username</span><strong>{issued.username}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Login (TSID)</span><strong>{issued.username}</strong></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Password</span><strong>{issued.password}</strong></div>
           </div>
           <Button className="mt-4 w-full" variant="outline" onClick={() => {
