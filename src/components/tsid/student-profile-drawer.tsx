@@ -117,6 +117,12 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
 
             {!editing && <CompletenessBanner result={completeness} entityLabel="student profile" onComplete={canEdit ? startEdit : undefined} />}
 
+            {!editing && !student.auth_uid && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                This student has no login account (registered before login was enabled). They can't log in and their password can't be reset. Delete and re-register to enable login.
+              </div>
+            )}
+
             {!editing && (
               <div className="space-y-2">
                 {canEdit && (
@@ -128,6 +134,15 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
                   <div className="flex gap-2">
                     <ResetStudentPassword tsid={tsid} />
                     <RequestDeleteStudent student={student} me={me} onDone={onChanged} />
+                  </div>
+                )}
+                {/* Gov admins: reset password + force delete (National). */}
+                {isGovAdmin && (
+                  <div className="flex gap-2">
+                    <ResetStudentPassword tsid={tsid} />
+                    {me.tier === 0 && (
+                      <ForceDeleteStudent student={student} onDone={() => { onChanged?.(); onClose(); }} />
+                    )}
                   </div>
                 )}
               </div>
@@ -275,5 +290,46 @@ function RequestDeleteStudent({ student, me, onDone }: { student: Student; me: a
     <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={request} disabled={loading}>
       <Trash2 className="h-3.5 w-3.5 mr-1" /> {loading ? "…" : "Request delete"}
     </Button>
+  );
+}
+
+// ── National admin: force delete (direct, no approval needed) ──────────────
+function ForceDeleteStudent({ student, onDone }: { student: Student; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  async function del() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "delete_student", tsid: student.tsid },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Delete failed"); return; }
+    toast.success("Student deleted");
+    setOpen(false);
+    onDone();
+  }
+  return (
+    <>
+      <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setOpen(true)}>
+        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+      </Button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.5)" }} onClick={() => setOpen(false)} />
+          <div style={{ position: "relative", background: "var(--card)", borderRadius: 16, padding: 24, width: 400, maxWidth: "90%" }}>
+            <div className="font-bold text-lg mb-2">Delete Student</div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Permanently delete <strong>{student.fullname}</strong> ({student.tsid})? This removes their record and login. This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>
+                {loading ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
