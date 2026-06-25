@@ -2,8 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
-import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+
+// xlsx is loaded lazily (only when bulk upload is actually used) so a missing
+// or slow xlsx install never blocks the rest of the app from loading.
+async function loadXLSX() {
+  return await import("xlsx");
+}
 
 type Mode = "students" | "schools";
 
@@ -39,7 +44,8 @@ export function BulkUpload({ mode, onRows }: {
   const [result, setResult] = useState<{ ok: number; failed: number; errors: string[] } | null>(null);
   const tpl = TEMPLATES[mode];
 
-  function downloadTemplate(fmt: "csv" | "xlsx") {
+  async function downloadTemplate(fmt: "csv" | "xlsx") {
+    const XLSX = await loadXLSX();
     const ws = XLSX.utils.json_to_sheet([tpl.sample], { header: tpl.headers });
     if (fmt === "csv") {
       const csv = XLSX.utils.sheet_to_csv(ws);
@@ -59,6 +65,7 @@ export function BulkUpload({ mode, onRows }: {
     setParsing(true);
     setResult(null);
     try {
+      const XLSX = await loadXLSX();
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
