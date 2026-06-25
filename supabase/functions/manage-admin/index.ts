@@ -41,11 +41,12 @@ Deno.serve(async (req) => {
 
     // Look up caller's admin row (role + scope)
     const { data: callerAdmin } = await admin
-      .from("admin_users").select("role, region, district").eq("auth_uid", caller.id).maybeSingle();
+      .from("admin_users").select("role, region, district, ref").eq("auth_uid", caller.id).maybeSingle();
     if (!callerAdmin) return json({ error: "Caller is not an administrator" }, 403);
     const isNational = callerAdmin.role === "gov" || callerAdmin.role === "admin";
     const isRegional = callerAdmin.role === "gov_region";
     const isDistrict = callerAdmin.role === "gov_district";
+    const isSchool   = callerAdmin.role === "school";
     const isGovTier  = isNational || isRegional || isDistrict;
 
     const body = (await req.json()) as Payload;
