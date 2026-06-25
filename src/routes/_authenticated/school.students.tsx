@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { BulkUpload } from "@/components/tsid/bulk-upload";
+import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
 import { toast } from "sonner";
-import { Plus, Copy } from "lucide-react";
-import { generateTsidNo, hashPassword } from "@/lib/tsid";
+import { Plus, Upload, Copy } from "lucide-react";
+import { generateTsidNo } from "@/lib/tsid";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/_authenticated/school/students")({ component: Page });
@@ -28,6 +30,7 @@ function Page() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [profileTsid, setProfileTsid] = useState<string | null>(null);
 
   const { data: school } = useQuery({
     enabled: !!me.schoolCode,
@@ -54,6 +57,8 @@ function Page() {
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Student Database</h1>
           <p className="text-sm text-muted-foreground">{students.length} student{students.length !== 1 ? "s" : ""}{school ? ` · ${school.school_name}` : ""}</p>
         </div>
+        <div className="flex gap-2">
+        {school && <BulkStudentUpload school={school} actorName={me.fullName ?? "School Admin"} onDone={() => qc.invalidateQueries({ queryKey: ["school-students-list"] })} />}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary" disabled={!school}><Plus className="h-4 w-4 mr-2" /> Create student</Button>
@@ -69,6 +74,7 @@ function Page() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Input className="max-w-sm" placeholder="Search by name or TSID…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -81,7 +87,7 @@ function Page() {
             </thead>
             <tbody>
               {filtered.map((st) => (
-                <tr key={st.tsid} className="border-t hover:bg-muted/20">
+                <tr key={st.tsid} className="border-t hover:bg-muted/20 cursor-pointer" onClick={() => setProfileTsid(st.tsid)}>
                   <td className="px-4 py-2">{st.photo ? <img src={st.photo} className="w-9 h-12 object-cover rounded-md border" alt="" /> : <div className="w-9 h-12 rounded-md border bg-muted flex items-center justify-center text-lg">👤</div>}</td>
                   <td className="px-4 py-3"><div className="font-semibold">{st.fullname}</div><div className="text-xs font-mono text-muted-foreground">{st.tsid}</div></td>
                   <td className="px-4 py-3 text-sm">{st.level ?? "—"}</td>
@@ -97,6 +103,15 @@ function Page() {
           </table>
         </div>
       </div>
+
+      {profileTsid && (
+        <StudentProfileDrawer
+          tsid={profileTsid}
+          viewerRole="school"
+          onClose={() => setProfileTsid(null)}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["school-students-list"] })}
+        />
+      )}
     </div>
   );
 }
@@ -246,5 +261,49 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
       </div>
       <Button type="submit" className="w-full bg-primary" disabled={loading}>{loading ? "Creating…" : "Create student"}</Button>
     </form>
+  );
+}
+// ── Bulk student upload (CSV/Excel) ────────────────────────────────────────
+function BulkStudentUpload({ school, actorName, onDone }: {
+  school: any; actorName: string; onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Upload className="h-4 w-4 mr-2" /> Bulk upload</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Bulk Upload Students</DialogTitle></DialogHeader>
+        <BulkUpload
+          mode="students"
+          onRows={async (rows) => {
+            let ok = 0, failed = 0; const errors: string[] = [];
+            for (const row of rows) {
+              if (!row.fullname?.trim()) { failed++; errors.push("Row missing fullname"); continue; }
+              const tsid = generateTsidNo();
+              const password = "tsid" + Math.random().toString(36).slice(2, 8);
+              const { data, error } = await supabase.functions.invoke("create-student", {
+                body: {
+                  tsid, fullname: row.fullname, dob: row.dob || null, gender: row.gender || null,
+                  nationality: row.nationality || "Tanzanian", level: row.level || null,
+                  blood_group: row.blood_group || null,
+                  school_code: school.school_code, school_name: school.school_name,
+                  region: school.region, district: school.district, ward: school.ward,
+                  school_contact: school.contact,
+                  parent_name: row.parent_name || null, parent_phone: row.parent_phone || null,
+                  parent_nida: row.parent_nida || null, relationship: row.relationship || null,
+                  password,
+                },
+              });
+              if (error || data?.error) { failed++; errors.push(`${row.fullname}: ${data?.error ?? error?.message}`); }
+              else ok++;
+            }
+            onDone();
+            return { ok, failed, errors };
+          }}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
