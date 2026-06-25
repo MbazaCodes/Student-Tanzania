@@ -27,7 +27,7 @@ function Page() {
   const { data: student } = useQuery({
     enabled: !!me.tsid,
     queryKey: ["my-student-min", me.tsid],
-    queryFn: async () => (await supabase.from("students").select("tsid,fullname,school_code,school_name,level").eq("tsid", me.tsid!).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("students").select("tsid,fullname,school_code,school_name,level,photo").eq("tsid", me.tsid!).maybeSingle()).data,
   });
 
   const { data: letters = [] } = useQuery({
@@ -130,6 +130,7 @@ function Page() {
               recipient_address: viewLetter.recipient_address,
               region: viewLetter.region,
               district: viewLetter.district,
+              photo: student.photo,
             } as LetterData} />
           )}
         </DialogContent>

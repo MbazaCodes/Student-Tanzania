@@ -19,6 +19,7 @@ export type LetterData = {
   recipient_address?: string;
   region?: string;
   district?: string;
+  photo?: string | null;
 };
 
 /**
@@ -84,23 +85,29 @@ export function LetterDocument({ data }: { data: LetterData }) {
             <p>Kwa heshima na taadhima, ninathibitisha kwamba mtajwa hapo chini ni mwanafunzi
             aliyesajiliwa rasmi katika Mfumo wa Utambuzi wa Wanafunzi Tanzania (TSID).</p>
 
-            <table style={{ width: "100%", fontSize: 12.5, margin: "16px 0", borderCollapse: "collapse" }}>
-              <tbody>
-                {[
-                  ["Jina / Name", data.student_name],
-                  ["Namba ya TSID", data.tsid],
-                  ["Shule / School", data.school_name],
-                  ...(data.level ? [["Ngazi / Level", data.level]] : []),
-                  ["Sekta / Sector", data.sector === "government" ? "Serikali (Government)" : "Binafsi (Private)"],
-                  ["Madhumuni / Purpose", data.purpose],
-                ].map(([k, v]) => (
-                  <tr key={k as string}>
-                    <td style={{ padding: "5px 0", width: 180, fontWeight: 700, verticalAlign: "top" }}>{k}</td>
-                    <td style={{ padding: "5px 0" }}>: {v}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ display: "flex", gap: 20, alignItems: "flex-start", margin: "16px 0" }}>
+              <table style={{ flex: 1, fontSize: 12.5, borderCollapse: "collapse" }}>
+                <tbody>
+                  {[
+                    ["Jina / Name", data.student_name],
+                    ["Namba ya TSID", data.tsid],
+                    ["Shule / School", data.school_name],
+                    ...(data.level ? [["Ngazi / Level", data.level]] : []),
+                    ["Sekta / Sector", data.sector === "government" ? "Serikali (Government)" : "Binafsi (Private)"],
+                    ["Madhumuni / Purpose", data.purpose],
+                  ].map(([k, v]) => (
+                    <tr key={k as string}>
+                      <td style={{ padding: "5px 0", width: 180, fontWeight: 700, verticalAlign: "top" }}>{k}</td>
+                      <td style={{ padding: "5px 0" }}>: {v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {data.photo && (
+                <img src={data.photo} alt="" crossOrigin="anonymous"
+                  style={{ width: 110, height: 140, objectFit: "cover", border: "2px solid #002855", borderRadius: 4, flexShrink: 0 }} />
+              )}
+            </div>
 
             {data.reason && (
               <p><strong>Maelezo / Details:</strong> {data.reason}</p>
