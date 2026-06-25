@@ -7,37 +7,32 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart({
-      server: { entry: "src/server.ts" },
+      server: {
+        entry: "src/server.ts",
+      },
     }),
     react(),
   ],
+
   resolve: {
     alias: {
-      '@': '/src',
+      "@": "/src",
     },
-    dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "@tanstack/react-router",
+      "@tanstack/react-start",
+    ],
   },
+
   server: {
-    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
     host: true,
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
   },
+
   build: {
     outDir: "dist",
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "vendor-react";
-            }
-            if (id.includes("@tanstack")) {
-              return "vendor-tanstack";
-            }
-            return "vendor";
-          }
-        }
-      }
-    }
-  },
+    sourcemap: true
+  }
 });
