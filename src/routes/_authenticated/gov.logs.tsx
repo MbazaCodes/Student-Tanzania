@@ -16,7 +16,7 @@ function Page() {
   const { data: logs=[] } = useQuery({ queryKey:["gov-logs"], queryFn: async()=>(await supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(300)).data??[] });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-primary" style={{fontFamily:"var(--font-display)"}}>{t("logs_title")}</h1>
         <p className="text-sm text-muted-foreground">{t("logs_sub")} · {logs.length} {t("entries")}</p>

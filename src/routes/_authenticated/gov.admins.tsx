@@ -98,7 +98,7 @@ function Page() {
           { label: "Regional", value: regional.length, color: "#F5C400" },
           { label: "District", value: district.length, color: "#007AFF" },
         ].map((t) => (
-          <div key={t.label} className="rounded-2xl border bg-card p-4">
+          <div key={t.label} className="rounded-2xl border bg-card p-5">
             <div className="text-2xl font-bold" style={{ color: t.color }}>{t.value}</div>
             <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.label} admins</div>
           </div>

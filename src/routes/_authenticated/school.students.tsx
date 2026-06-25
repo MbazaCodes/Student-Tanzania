@@ -47,7 +47,7 @@ function Page() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Student Database</h1>

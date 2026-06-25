@@ -57,7 +57,7 @@ function Page() {
           { label: "School", value: student.school_name ?? "—", color: "" },
           { label: "Region", value: student.region ?? "—", color: "" },
         ].map((t) => (
-          <div key={t.label} className="rounded-xl border bg-card p-4">
+          <div key={t.label} className="rounded-2xl border bg-card p-5">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">{t.label}</div>
             <div className={`mt-1 font-semibold capitalize truncate ${t.color}`}>{t.value}</div>
           </div>
@@ -80,7 +80,7 @@ function Page() {
         </div>
         <div className="space-y-4">
           <div className="rounded-2xl border bg-card overflow-hidden">
-            <div className="px-4 py-3 border-b bg-muted/40 font-semibold text-sm">🏫 School</div>
+            <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">🏫 School</div>
             <div className="px-4 py-2">
               <InfoRow label="Name" value={student.school_name ?? "—"} />
               <InfoRow label="Code" value={student.school_code} mono />
@@ -90,7 +90,7 @@ function Page() {
             </div>
           </div>
           <div className="rounded-2xl border bg-card overflow-hidden">
-            <div className="px-4 py-3 border-b bg-muted/40 font-semibold text-sm">👨‍👩‍👧 Parent / Guardian</div>
+            <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">👨‍👩‍👧 Parent / Guardian</div>
             <div className="px-4 py-2">
               <InfoRow label="Name" value={student.parent_name ?? "—"} />
               <InfoRow label="Relationship" value={student.relationship ?? "—"} />

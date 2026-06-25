@@ -25,7 +25,7 @@ function Page() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Applications</h1>
       <div className="rounded-2xl border bg-card overflow-hidden">
         <table className="w-full text-sm">

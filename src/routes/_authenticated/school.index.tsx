@@ -58,17 +58,18 @@ function Page() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="rounded-2xl bg-primary text-primary-foreground p-6 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>
-            {school?.name ?? "School Dashboard"}
+          <div className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-1">School Portal</div>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+            {school?.school_name ?? "School Dashboard"}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm opacity-80 mt-1">
             {school?.type}{school?.region ? ` · ${school.region}` : ""}{school?.district ? `, ${school.district}` : ""}
-            {school?.code && <> · Code <span className="font-mono text-foreground">{school.school_code}</span></>}
+            {school?.school_code && <> · Code <span className="font-mono">{school.school_code}</span></>}
           </p>
         </div>
-        <Button asChild className="bg-primary">
+        <Button asChild variant="secondary">
           <Link to="/school/students"><Plus className="h-4 w-4 mr-2" /> Create Student</Link>
         </Button>
       </div>
@@ -95,7 +96,7 @@ function Page() {
             <p className="px-4 py-8 text-sm text-center text-muted-foreground">No students yet.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr><th className="px-4 py-2 text-left">Name</th><th className="px-4 py-2 text-left">TSID</th><th className="px-4 py-2 text-left">Level</th></tr>
               </thead>
               <tbody>

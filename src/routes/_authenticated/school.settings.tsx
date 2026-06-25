@@ -15,7 +15,7 @@ function Page() {
   });
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Settings</h1>
       <div className="rounded-2xl border bg-card p-6 space-y-3">
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">School profile</div>

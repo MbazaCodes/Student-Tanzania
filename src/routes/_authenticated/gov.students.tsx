@@ -22,7 +22,7 @@ function Page() {
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-primary" style={{fontFamily:"var(--font-display)"}}>{t("nat_db")}</h1>
         <p className="text-sm text-muted-foreground">{students.length} {t("nat_db_sub")} {schools.length} {t("schools_in")} {regions.length} {t("regions_text")}</p>
@@ -34,7 +34,7 @@ function Page() {
           {label:t("kpi_schools"),    value:schools.length,  color:"var(--tz-blue)"},
           {label:t("kpi_regions"),    value:regions.length,  color:"var(--tz-gold)"},
         ].map(tile=>(
-          <div key={tile.label} className="rounded-xl border bg-card p-4">
+          <div key={tile.label} className="rounded-2xl border bg-card p-5">
             <div className="text-2xl font-bold" style={{color:tile.color}}>{tile.value}</div>
             <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{tile.label}</div>
           </div>

@@ -85,7 +85,7 @@ function GovDashboard() {
             <Link to="/gov/schools" className="text-xs text-primary hover:underline">{t("manage_arrow")}</Link>
           </div>
           {schoolsData.length===0 ? <p className="px-4 py-8 text-sm text-center text-muted-foreground">{t("no_schools")}</p> : (
-            <table className="w-full text-sm"><thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+            <table className="w-full text-sm"><thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
               <tr><th className="px-4 py-2 text-left">{t("col_code")}</th><th className="px-4 py-2 text-left">{t("col_school")}</th><th className="px-4 py-2 text-left">{t("col_region")}</th><th className="px-4 py-2 text-left">{t("col_status")}</th></tr>
             </thead><tbody>
               {schoolsData.map((s)=>(
