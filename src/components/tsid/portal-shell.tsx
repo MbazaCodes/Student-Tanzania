@@ -268,52 +268,14 @@ export function PortalShell({ title, subtitle, items }: {
               </div>
             </div>
 
-            {/* Right: role badge + user + TSID logo */}
+            {/* Right: TSID logo only — user identity lives in the sidebar */}
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-
-              {/* Role badge */}
-              <div style={{
-                padding: "3px 10px", borderRadius: 20,
-                background: `${meta.accent}18`,
-                border: `1px solid ${meta.accent}44`,
-                fontSize: 9.5, fontWeight: 800,
-                color: meta.accent, letterSpacing: 0.8,
-                textTransform: "uppercase",
-              }}>
-                {meta.badge}
-              </div>
-
-              {/* User info */}
-              {!me.loading && me.email && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.1 }}>
-                      {me.fullName ?? me.email?.split("@")[0]}
-                    </div>
-                    <div style={{ fontSize: 9.5, color: "var(--muted-foreground)", marginTop: 1 }}>
-                      {me.email}
-                    </div>
-                  </div>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: "50%",
-                    background: `linear-gradient(135deg, ${meta.accent}, #003366)`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontWeight: 900, fontSize: 14, color: "#fff", flexShrink: 0,
-                    border: "2px solid var(--border)",
-                  }}>
-                    {(me.fullName ?? me.email).charAt(0).toUpperCase()}
-                  </div>
-                </div>
-              )}
-
-              {/* TSID logo */}
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
-                paddingLeft: 14, borderLeft: "1px solid var(--border)",
               }}>
-                <img src={ASSETS.logo} alt="TSID" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <img src={ASSETS.logo} alt="TSID" style={{ width: 34, height: 34, objectFit: "contain" }} />
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 900, color: "#003366", letterSpacing: 0.3 }}>TSID</div>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: "#003366", letterSpacing: 0.3 }}>TSID</div>
                   <div style={{ fontSize: 8, color: "#1EB53A", fontWeight: 700, letterSpacing: 0.5 }}>WIZARA YA ELIMU</div>
                 </div>
               </div>
