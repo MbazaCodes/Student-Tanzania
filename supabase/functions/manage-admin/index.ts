@@ -14,9 +14,10 @@ const corsHeaders = {
 };
 
 interface Payload {
-  action: "reset_password" | "delete_admin";
-  target_uid: string;
+  action: "reset_password" | "delete_admin" | "reset_school_password";
+  target_uid: string;       // auth uid for admin actions
   new_password?: string;
+  school_code?: string;     // for reset_school_password
 }
 
 Deno.serve(async (req) => {
@@ -37,14 +38,25 @@ Deno.serve(async (req) => {
     const { data: { user: caller }, error: cErr } = await callerClient.auth.getUser();
     if (cErr || !caller) return json({ error: "Unauthorized" }, 401);
 
-    // Caller must be National admin
+    // Look up caller's admin row (role + scope)
     const { data: callerAdmin } = await admin
-      .from("admin_users").select("role").eq("auth_uid", caller.id).maybeSingle();
-    const isNational = callerAdmin?.role === "gov" || callerAdmin?.role === "admin";
-    if (!isNational) return json({ error: "Only National admins can perform this action" }, 403);
+      .from("admin_users").select("role, region, district").eq("auth_uid", caller.id).maybeSingle();
+    if (!callerAdmin) return json({ error: "Caller is not an administrator" }, 403);
+    const isNational = callerAdmin.role === "gov" || callerAdmin.role === "admin";
+    const isRegional = callerAdmin.role === "gov_region";
+    const isDistrict = callerAdmin.role === "gov_district";
+    const isGovTier  = isNational || isRegional || isDistrict;
 
-    const { action, target_uid, new_password } = (await req.json()) as Payload;
-    if (!action || !target_uid) return json({ error: "Missing action or target_uid" }, 400);
+    const body = (await req.json()) as Payload;
+    const { action, target_uid, new_password, school_code } = body;
+    if (!action) return json({ error: "Missing action" }, 400);
+
+    // admin-targeted actions still require National
+    const adminActions = action === "reset_password" || action === "delete_admin";
+    if (adminActions && !isNational) {
+      return json({ error: "Only National admins can manage other admins" }, 403);
+    }
+    if (adminActions && !target_uid) return json({ error: "Missing target_uid" }, 400);
 
     // Cannot act on self for delete
     if (action === "delete_admin" && target_uid === caller.id) {
@@ -81,6 +93,41 @@ Deno.serve(async (req) => {
         action: "admin:delete",
         message: `Deleted admin ${target?.name ?? target_uid} (${target?.email ?? ""})`,
         by_name: caller.email ?? "National Admin", by_role: callerAdmin.role, by_ref: caller.id,
+      });
+      return json({ success: true });
+    }
+
+    if (action === "reset_school_password") {
+      if (!isGovTier) return json({ error: "Not permitted" }, 403);
+      if (!school_code) return json({ error: "Missing school_code" }, 400);
+      if (!new_password || new_password.length < 6) {
+        return json({ error: "Password must be at least 6 characters" }, 400);
+      }
+
+      // Look up the school + its auth account
+      const { data: school } = await admin
+        .from("schools")
+        .select("school_code, school_name, region, district, auth_uid, email")
+        .eq("school_code", school_code)
+        .maybeSingle();
+      if (!school) return json({ error: "School not found" }, 404);
+      if (!school.auth_uid) return json({ error: "This school has no login account" }, 400);
+
+      // Scope enforcement
+      if (isRegional && school.region !== callerAdmin.region) {
+        return json({ error: "Regional admins can only manage schools in their own region" }, 403);
+      }
+      if (isDistrict && school.district !== callerAdmin.district) {
+        return json({ error: "District admins can only manage schools in their own district" }, 403);
+      }
+
+      const { error } = await admin.auth.admin.updateUserById(school.auth_uid, { password: new_password });
+      if (error) return json({ error: error.message }, 400);
+
+      await admin.from("activity_logs").insert({
+        action: "school:reset_password",
+        message: `Reset password for school ${school.school_code} — ${school.school_name}`,
+        by_name: caller.email ?? "Admin", by_role: callerAdmin.role, by_ref: school.school_code,
       });
       return json({ success: true });
     }

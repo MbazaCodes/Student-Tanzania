@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote } from "lucide-react";
+import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
 
@@ -281,7 +281,7 @@ function Page() {
 
   const { data: schools = [] } = useQuery({
     queryKey: ["gov-schools"],
-    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes").order("school_name")).data ?? [],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes,auth_uid,email").order("school_name")).data ?? [],
   });
 
   async function toggleStatus(code: string, currentStatus: string) {
@@ -353,6 +353,9 @@ function Page() {
                       <Button size="sm" variant="ghost" onClick={() => toggleStatus(s.school_code, s.status)} title={s.status === "active" ? "Suspend" : "Activate"}>
                         {s.status === "active" ? <BadgeX className="h-3.5 w-3.5" /> : <BadgeCheck className="h-3.5 w-3.5" />}
                       </Button>
+                      {/* Reset password — available to all gov admins (scope-enforced server-side) */}
+                      <ResetSchoolPassword school={s} />
+                      {/* Edit + delete — National only */}
                       {me.tier === 0 && (
                         <SchoolActions school={s} actorName={me.fullName ?? "Gov Admin"}
                           onChange={() => qc.invalidateQueries({ queryKey: ["gov-schools"] })} />
@@ -633,5 +636,66 @@ function DeleteSchoolConfirm({ school, actorName, onDone }: {
         <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>{loading ? "Deleting…" : "Delete"}</Button>
       </div>
     </div>
+  );
+}
+
+// ── School password reset — available to all gov admins (scope enforced server-side) ──
+function ResetSchoolPassword({ school }: {
+  school: { school_code: string; school_name: string; auth_uid?: string | null; email?: string | null };
+}) {
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState(genPassword());
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function reset() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "reset_school_password", school_code: school.school_code, new_password: pw },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    setDone(true);
+    toast.success("School password reset");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setPw(genPassword()); setDone(false); } }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" title="Reset school password"><KeyRound className="h-3.5 w-3.5" /></Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Reset School Password</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-muted-foreground">
+            New login password for <strong>{school.school_name}</strong>
+            {school.email && <> (<span className="font-mono">{school.email}</span>)</>}.
+          </p>
+          {!school.auth_uid && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+              This school has no login account (registered before login accounts were enabled). Re-register it to enable login.
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input className="font-mono" value={pw} onChange={(e) => setPw(e.target.value)} disabled={!school.auth_uid} />
+            <Button variant="outline" size="sm" onClick={() => setPw(genPassword())} disabled={!school.auth_uid}>↻</Button>
+          </div>
+          {done ? (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm">
+              <div className="font-semibold text-emerald-800 mb-1">✅ Password reset</div>
+              <div className="font-mono flex items-center justify-between">
+                {pw}
+                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(pw); toast.success("Copied"); }}><Copy className="h-3.5 w-3.5" /></Button>
+              </div>
+              <Button className="w-full mt-3" variant="outline" onClick={() => setOpen(false)}>Done</Button>
+            </div>
+          ) : (
+            <Button className="w-full bg-primary" onClick={reset} disabled={loading || !school.auth_uid}>
+              {loading ? "Resetting…" : "Reset password"}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
