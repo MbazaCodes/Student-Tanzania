@@ -17,13 +17,20 @@ export function PortalShell({ title, items, subtitle }: {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isDark = theme === "dark";
-  const sidebarBg     = isDark ? "#0d1f3c" : "#003366";
-  const sidebarText   = "#e2e8f0";
-  const sidebarSub    = "#a3c4dd";
-  const sidebarBorder = "rgba(255,255,255,.10)";
-  const activeBg      = "rgba(255,255,255,.14)";
-  const hoverBg       = "rgba(255,255,255,.07)";
-  const mainBg        = isDark ? "#0f172a" : "#f0f4fa";
+
+  // ── Sidebar colours — match landing page navy/green identity ──────
+  const sidebarBg     = isDark ? "#0a1628" : "#002855";   // deeper navy
+  const sidebarText   = "#e8f0f8";
+  const sidebarSub    = "#93bcd6";
+  const sidebarBorder = "rgba(255,255,255,.09)";
+  const activeBg      = "rgba(30,181,58,.18)";            // tz-green tint
+  const activeText    = "#ffffff";
+  const hoverBg       = "rgba(255,255,255,.06)";
+
+  // ── Main area — clean white/very-light-blue like landing ─────────
+  const mainBg        = "var(--background)";   // matches landing page exactly
+  const topbarBg      = "var(--card)";
+  const topbarBorder  = "var(--border)";
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -32,7 +39,7 @@ export function PortalShell({ title, items, subtitle }: {
 
   const sidebar = (
     <aside style={{
-      width: 240, background: sidebarBg, color: sidebarText,
+      width: 248, background: sidebarBg, color: sidebarText,
       display: "flex", flexDirection: "column",
       flexShrink: 0, height: "100%", overflowY: "auto",
     }}>
@@ -40,37 +47,50 @@ export function PortalShell({ title, items, subtitle }: {
       <div className="tz-flag-stripe" />
 
       {/* Brand */}
-      <Link to="/" style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 16px", borderBottom: `1px solid ${sidebarBorder}`, textDecoration: "none" }}>
-        <img src={ASSETS.logo} alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
+      <Link to="/" style={{
+        display: "flex", alignItems: "center", gap: 13,
+        padding: "20px 18px 18px", borderBottom: `1px solid ${sidebarBorder}`,
+        textDecoration: "none",
+      }}>
+        <img src={ASSETS.coat} alt="" style={{ width: 42, height: 42, objectFit: "contain", flexShrink: 0 }} />
         <div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 15, color: "#fff", letterSpacing: -0.2 }}>{title}</div>
-          {subtitle && <div style={{ fontSize: 9, fontWeight: 700, color: sidebarSub, letterSpacing: 0.8, marginTop: 2, textTransform: "uppercase" }}>{subtitle}</div>}
+          <div style={{
+            fontFamily: "var(--font-display)", fontWeight: 900,
+            fontSize: 14, color: "#fff", letterSpacing: -0.2, lineHeight: 1.1,
+          }}>{title}</div>
+          {subtitle && <div style={{
+            fontSize: 8.5, fontWeight: 700, color: "#1EB53A",
+            letterSpacing: 0.9, marginTop: 3, textTransform: "uppercase",
+          }}>{subtitle}</div>}
         </div>
       </Link>
 
-      {/* Nav items */}
-      <nav aria-label="Portal navigation" style={{ flex: 1, padding: "12px 10px", display: "flex", flexDirection: "column", gap: 3 }}>
+      {/* Nav */}
+      <nav aria-label="Portal navigation" style={{
+        flex: 1, padding: "14px 10px",
+        display: "flex", flexDirection: "column", gap: 2,
+      }}>
         {items.map((it) => {
           const active = pathname === it.to || (it.to !== "/" && pathname.startsWith(it.to + "/"));
           return (
             <Link key={it.to} to={it.to} onClick={() => setMobileOpen(false)}
               style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 12px", borderRadius: 10,
+                display: "flex", alignItems: "center", gap: 11,
+                padding: "10px 13px", borderRadius: 10,
                 background: active ? activeBg : "transparent",
-                color: active ? "#fff" : sidebarSub,
+                color: active ? activeText : sidebarSub,
                 fontWeight: active ? 700 : 500,
                 fontSize: 13.5, textDecoration: "none",
                 transition: "all .15s",
+                borderLeft: active ? "3px solid #1EB53A" : "3px solid transparent",
               }}
               onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = hoverBg; }}
               onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
-              <span style={{ width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: active ? 1 : 0.75 }}>
+              <span style={{ width: 18, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: active ? 1 : 0.7 }}>
                 {it.icon}
               </span>
               {it.label}
-              {active && <div style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: 3, background: "#1EB53A" }} />}
             </Link>
           );
         })}
@@ -78,25 +98,22 @@ export function PortalShell({ title, items, subtitle }: {
 
       {/* Bottom controls */}
       <div style={{ padding: "12px 10px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* Theme + Lang row */}
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={toggleTheme} title="Toggle theme"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 12, fontWeight: 600 }}>
-            {isDark ? <Sun style={{ width: 14, height: 14 }} /> : <Moon style={{ width: 14, height: 14 }} />}
+          <button onClick={toggleTheme}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11.5, fontWeight: 600 }}>
+            {isDark ? <Sun style={{ width: 13, height: 13 }} /> : <Moon style={{ width: 13, height: 13 }} />}
             {isDark ? "Light" : "Dark"}
           </button>
-          <button onClick={toggleLang} title="Switch language"
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 12, fontWeight: 600 }}>
-            <Languages style={{ width: 14, height: 14 }} />
+          <button onClick={toggleLang}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11.5, fontWeight: 600 }}>
+            <Languages style={{ width: 13, height: 13 }} />
             {lang === "en" ? "Kiswahili" : "English"}
           </button>
         </div>
-
-        {/* Sign out */}
         <button onClick={signOut}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px", borderRadius: 10, border: "none", background: "rgba(239,68,68,.12)", cursor: "pointer", color: "#fca5a5", fontSize: 13.5, fontWeight: 600, transition: "all .15s" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.22)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.12)"; }}>
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 13px", borderRadius: 10, border: "none", background: "rgba(239,68,68,.1)", cursor: "pointer", color: "#fca5a5", fontSize: 13.5, fontWeight: 600, transition: "all .15s" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.2)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.1)"; }}>
           <LogOut style={{ width: 15, height: 15 }} /> {t("signout")}
         </button>
       </div>
@@ -110,12 +127,12 @@ export function PortalShell({ title, items, subtitle }: {
       <div className="md:hidden" style={{
         background: sidebarBg, color: sidebarText,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 16px", height: 56, flexShrink: 0,
+        padding: "0 16px", height: 56, flexShrink: 0, position: "relative",
       }}>
         <div className="tz-flag-stripe" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <img src={ASSETS.logo} alt="" style={{ width: 36, height: 36, objectFit: "contain" }} />
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 16, color: "#fff" }}>{title}</span>
+          <img src={ASSETS.coat} alt="" style={{ width: 34, height: 34, objectFit: "contain" }} />
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 15, color: "#fff" }}>{title}</span>
         </Link>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={toggleTheme} style={{ padding: 7, borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub }}>
@@ -130,11 +147,11 @@ export function PortalShell({ title, items, subtitle }: {
         </div>
       </div>
 
-      {/* Mobile sidebar drawer */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex" }}>
           <div style={{ width: 260, height: "100%", overflowY: "auto" }}>{sidebar}</div>
-          <div style={{ flex: 1, background: "rgba(0,0,0,.45)" }} onClick={() => setMobileOpen(false)} />
+          <div style={{ flex: 1, background: "rgba(0,0,0,.5)" }} onClick={() => setMobileOpen(false)} />
         </div>
       )}
 
@@ -142,9 +159,41 @@ export function PortalShell({ title, items, subtitle }: {
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <div className="hidden md:flex" style={{ height: "100vh", position: "sticky", top: 0 }}>{sidebar}</div>
 
-        {/* Main content */}
-        <main id="main-content" style={{ flex: 1, minWidth: 0, overflowY: "auto" }} aria-label="Main content">
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px 60px" }}>
+        {/* Main content area */}
+        <main id="main-content" style={{ flex: 1, minWidth: 0, overflowY: "auto", display: "flex", flexDirection: "column" }} aria-label="Main content">
+
+          {/* Top bar — matches landing page header feel */}
+          <div style={{
+            background: topbarBg,
+            borderBottom: `1px solid ${topbarBorder}`,
+            padding: "0 28px",
+            height: 56, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            position: "sticky", top: 0, zIndex: 10,
+            boxShadow: "0 1px 3px var(--border)",
+          }}>
+            {/* breadcrumb path */}
+            <div style={{ fontSize: 12, color: isDark ? "#64748b" : "#94a3b8", fontWeight: 600, letterSpacing: 0.3 }}>
+              {pathname.split("/").filter(Boolean).map((seg, i, arr) => (
+                <span key={seg}>
+                  <span style={{ textTransform: "capitalize" }}>{seg.replace(/-/g, " ")}</span>
+                  {i < arr.length - 1 && <span style={{ margin: "0 6px", opacity: 0.4 }}>›</span>}
+                </span>
+              ))}
+            </div>
+
+            {/* Right side — TSID logo + gov branding */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img src={ASSETS.logo} alt="TSID" style={{ width: 30, height: 30, objectFit: "contain", opacity: 0.85 }} />
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#94a3b8" : "#003366", letterSpacing: 0.3 }}>TSID</div>
+                <div style={{ fontSize: 9, color: "#1EB53A", fontWeight: 700, letterSpacing: 0.5 }}>WIZARA YA ELIMU</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Page content */}
+          <div style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "30px 28px 60px", boxSizing: "border-box" }}>
             <Outlet />
           </div>
         </main>
