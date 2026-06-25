@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { levelsForSchoolType } from "@/lib/tz-geo";
+import { levelsForSchoolType, NATIONALITIES, RELATIONSHIPS } from "@/lib/tz-geo";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,7 +184,12 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
             <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>Nationality</Label><Input value={nationality} onChange={(e) => setNationality(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Nationality</Label>
+          <Select value={nationality} onValueChange={setNationality}>
+            <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+            <SelectContent>{NATIONALITIES.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5"><Label>Blood Group</Label>
           <Select value={bloodGroup} onValueChange={setBloodGroup}>
             <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
@@ -207,7 +212,12 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
         <div className="space-y-1.5"><Label>Enrollment Date</Label><Input type="date" value={enrollmentDate} onChange={(e) => setEnrollmentDate(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Issue Date</Label><Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Parent / Guardian</Label><Input value={parentName} onChange={(e) => setParentName(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Relationship</Label><Input value={relationship} onChange={(e) => setRelationship(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Relationship</Label>
+          <Select value={relationship} onValueChange={setRelationship}>
+            <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+            <SelectContent>{RELATIONSHIPS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5"><Label>Parent NIDA (20 digits)</Label><Input value={parentNida} onChange={(e) => setParentNida(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Parent Phone</Label><Input value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="+255 7XX XXX XXX" /></div>
       </div>

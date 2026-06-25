@@ -76,3 +76,16 @@ export function levelsForSchoolType(type: string | null | undefined): string[] {
   if (!type) return LEVELS_BY_SCHOOL_TYPE["Primary School"];
   return LEVELS_BY_SCHOOL_TYPE[type] ?? LEVELS_BY_SCHOOL_TYPE["Primary School"];
 }
+
+// ── Nationalities (Tanzania first, then EAC + common) ──────────────────────
+export const NATIONALITIES = [
+  "Tanzanian", "Kenyan", "Ugandan", "Rwandan", "Burundian",
+  "Congolese (DRC)", "South Sudanese", "Zambian", "Malawian",
+  "Mozambican", "Somali", "Ethiopian", "Other",
+];
+
+// ── Guardian relationship options ──────────────────────────────────────────
+export const RELATIONSHIPS = [
+  "Mother", "Father", "Guardian", "Grandparent",
+  "Aunt", "Uncle", "Sibling", "Other",
+];
