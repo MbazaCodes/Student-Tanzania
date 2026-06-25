@@ -31,6 +31,8 @@ export function adminTier(role: Role | null | undefined): 0 | 1 | 2 | null {
 }
 
 export function roleHome(role: Role | null | undefined): string {
+  if (role === "gov_region") return "/regional";
+  if (role === "gov_district") return "/district";
   if (isGovRole(role)) return "/gov";
   if (role === "school") return "/school";
   if (role === "student") return "/student";

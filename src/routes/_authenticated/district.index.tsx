@@ -1,46 +1,57 @@
-﻿// src/routes/_authenticated/district.index.tsx
 import { createFileRoute } from "@tanstack/react-router";
-import { DistrictLayout } from "@/components/district";
-import { DistrictStats, DistrictSchoolList, DistrictRecentActivity } from "@/components/district/dashboard";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
-export const Route = createFileRoute("/_authenticated/district/")({
-  component: DistrictDashboardPage,
-});
+export const Route = createFileRoute("/_authenticated/district/")({ component: Page });
 
-function DistrictDashboardPage() {
-  const stats = {
-    totalSchools: 85,
-    totalStudents: 5000,
-    activeSchools: 78,
-    pendingApprovals: 5,
-    studentsGrowth: 8,
-    thisMonthEnrollments: 120,
-  };
+function Page() {
+  const me = useCurrentUser();
 
-  const schools = [
-    { id: "1", name: "International School of Tanzania", code: "IST001", studentCount: 850, status: "active" },
-    { id: "2", name: "Dar es Salaam High School", code: "DHS002", studentCount: 620, status: "active" },
-    { id: "3", name: "Kinondoni Primary School", code: "KPS003", studentCount: 480, status: "active" },
-    { id: "4", name: "Mwananyamala Secondary", code: "MSS004", studentCount: 350, status: "suspended" },
-    { id: "5", name: "Ubungo Academy", code: "UBA005", studentCount: 290, status: "active" },
-  ];
-
-  const activities = [
-    { id: "1", type: "student_registered", description: "45 new students registered at IST", time: "3 hours ago" },
-    { id: "2", type: "approval_pending", description: "3 approval requests pending review", time: "5 hours ago" },
-    { id: "3", type: "report_generated", description: "Weekly attendance report generated", time: "1 day ago" },
-    { id: "4", type: "school_updated", description: "School profile updated: DHS002", time: "2 days ago" },
-  ];
+  const { data: schools = [] } = useQuery({
+    enabled: !!me.district,
+    queryKey: ["district-schools", me.district],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,status").eq("district", me.district!)).data ?? [],
+  });
+  const { data: students = [] } = useQuery({
+    enabled: !!me.district,
+    queryKey: ["district-students", me.district],
+    queryFn: async () => (await supabase.from("students").select("tsid,status").eq("district", me.district!)).data ?? [],
+  });
 
   return (
-    <DistrictLayout district="Kinondoni" region="Dar es Salaam" title="Dashboard">
-      <div className="space-y-6">
-        <DistrictStats stats={stats} />
-        <div className="grid lg:grid-cols-2 gap-6">
-          <DistrictSchoolList schools={schools} />
-          <DistrictRecentActivity activities={activities} />
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-primary text-primary-foreground p-6">
+        <div className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-1">District Portal</div>
+        <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>{me.district} Dashboard</h1>
+        <p className="text-sm opacity-80 mt-1">Schools and students in {me.district}, {me.region}.</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Schools", value: schools.length, color: "#1EB53A" },
+          { label: "Students", value: students.length, color: "#002855" },
+          { label: "Active IDs", value: students.filter((s: any) => s.status === "active").length, color: "#007AFF" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border bg-card p-5">
+            <div className="text-3xl font-bold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">Schools in {me.district}</div>
+        <div className="divide-y">
+          {schools.length === 0 && <div className="p-8 text-center text-muted-foreground text-sm">No schools registered yet.</div>}
+          {schools.map((s: any) => (
+            <div key={s.school_code} className="px-4 py-3 flex items-center justify-between text-sm">
+              <div><span className="font-medium">{s.school_name}</span> <span className="font-mono text-xs text-muted-foreground">{s.school_code}</span></div>
+              <span className="text-xs capitalize" style={{ color: s.status === "active" ? "#16a34a" : "#94a3b8" }}>{s.status}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </DistrictLayout>
+    </div>
   );
 }
