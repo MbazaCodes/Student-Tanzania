@@ -33,3 +33,6 @@ SELECT 'Migration 021 complete — profiles bucket + delete requests' AS result;
 
 -- Store school_type on student so level dropdown works during edit
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS school_type TEXT;
+
+-- School logo / photo column
+ALTER TABLE public.schools ADD COLUMN IF NOT EXISTS logo TEXT;

@@ -144,7 +144,7 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
 
     const { data, error } = await supabase.functions.invoke("create-student", {
       body: {
-        tsid, fullname, dob, gender, nationality, level,
+        tsid, fullname, dob, gender, nationality, level, school_type: school.type,
         school_code: school.school_code, school_name: school.school_name,
         region: school.region, district: school.district, ward: school.ward,
         school_contact: school.contact,
@@ -286,7 +286,7 @@ function BulkStudentUpload({ school, actorName, onDone }: {
               const { data, error } = await supabase.functions.invoke("create-student", {
                 body: {
                   tsid, fullname: row.fullname, dob: row.dob || null, gender: row.gender || null,
-                  nationality: row.nationality || "Tanzanian", level: row.level || null,
+                  nationality: row.nationality || "Tanzanian", level: row.level || null, school_type: school.type,
                   blood_group: row.blood_group || null,
                   school_code: school.school_code, school_name: school.school_name,
                   region: school.region, district: school.district, ward: school.ward,

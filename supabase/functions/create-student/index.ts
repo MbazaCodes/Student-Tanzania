@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
       relationship: p.relationship ?? null,
       parent_phone: p.parent_phone ?? null,
       cred_username: tsid,
+      school_type: p.school_type ?? null,
       status: "active",
       auth_uid: studentUid,
     });
