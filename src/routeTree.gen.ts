@@ -24,10 +24,13 @@ import { Route as AuthenticatedStudentIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedStudentApplicationsRouteImport } from './routes/_authenticated/student.applications'
 import { Route as AuthenticatedSchoolStudentsRouteImport } from './routes/_authenticated/school.students'
 import { Route as AuthenticatedSchoolSettingsRouteImport } from './routes/_authenticated/school.settings'
+import { Route as AuthenticatedSchoolApprovalsRouteImport } from './routes/_authenticated/school.approvals'
 import { Route as AuthenticatedSchoolApplicationsRouteImport } from './routes/_authenticated/school.applications'
 import { Route as AuthenticatedGovStudentsRouteImport } from './routes/_authenticated/gov.students'
 import { Route as AuthenticatedGovSchoolsRouteImport } from './routes/_authenticated/gov.schools'
 import { Route as AuthenticatedGovLogsRouteImport } from './routes/_authenticated/gov.logs'
+import { Route as AuthenticatedGovApprovalsRouteImport } from './routes/_authenticated/gov.approvals'
+import { Route as AuthenticatedGovAdminsRouteImport } from './routes/_authenticated/gov.admins'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -108,6 +111,12 @@ const AuthenticatedSchoolSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedSchoolRoute,
   } as any)
+const AuthenticatedSchoolApprovalsRoute =
+  AuthenticatedSchoolApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedSchoolRoute,
+  } as any)
 const AuthenticatedSchoolApplicationsRoute =
   AuthenticatedSchoolApplicationsRouteImport.update({
     id: '/applications',
@@ -130,6 +139,17 @@ const AuthenticatedGovLogsRoute = AuthenticatedGovLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AuthenticatedGovRoute,
 } as any)
+const AuthenticatedGovApprovalsRoute =
+  AuthenticatedGovApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedGovRoute,
+  } as any)
+const AuthenticatedGovAdminsRoute = AuthenticatedGovAdminsRouteImport.update({
+  id: '/admins',
+  path: '/admins',
+  getParentRoute: () => AuthenticatedGovRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,10 +159,13 @@ export interface FileRoutesByFullPath {
   '/gov': typeof AuthenticatedGovRouteWithChildren
   '/school': typeof AuthenticatedSchoolRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
+  '/gov/admins': typeof AuthenticatedGovAdminsRoute
+  '/gov/approvals': typeof AuthenticatedGovApprovalsRoute
   '/gov/logs': typeof AuthenticatedGovLogsRoute
   '/gov/schools': typeof AuthenticatedGovSchoolsRoute
   '/gov/students': typeof AuthenticatedGovStudentsRoute
   '/school/applications': typeof AuthenticatedSchoolApplicationsRoute
+  '/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
   '/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/student/applications': typeof AuthenticatedStudentApplicationsRoute
@@ -156,10 +179,13 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/gov/admins': typeof AuthenticatedGovAdminsRoute
+  '/gov/approvals': typeof AuthenticatedGovApprovalsRoute
   '/gov/logs': typeof AuthenticatedGovLogsRoute
   '/gov/schools': typeof AuthenticatedGovSchoolsRoute
   '/gov/students': typeof AuthenticatedGovStudentsRoute
   '/school/applications': typeof AuthenticatedSchoolApplicationsRoute
+  '/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
   '/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/student/applications': typeof AuthenticatedStudentApplicationsRoute
@@ -178,10 +204,13 @@ export interface FileRoutesById {
   '/_authenticated/gov': typeof AuthenticatedGovRouteWithChildren
   '/_authenticated/school': typeof AuthenticatedSchoolRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
+  '/_authenticated/gov/admins': typeof AuthenticatedGovAdminsRoute
+  '/_authenticated/gov/approvals': typeof AuthenticatedGovApprovalsRoute
   '/_authenticated/gov/logs': typeof AuthenticatedGovLogsRoute
   '/_authenticated/gov/schools': typeof AuthenticatedGovSchoolsRoute
   '/_authenticated/gov/students': typeof AuthenticatedGovStudentsRoute
   '/_authenticated/school/applications': typeof AuthenticatedSchoolApplicationsRoute
+  '/_authenticated/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
   '/_authenticated/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/_authenticated/student/applications': typeof AuthenticatedStudentApplicationsRoute
@@ -200,10 +229,13 @@ export interface FileRouteTypes {
     | '/gov'
     | '/school'
     | '/student'
+    | '/gov/admins'
+    | '/gov/approvals'
     | '/gov/logs'
     | '/gov/schools'
     | '/gov/students'
     | '/school/applications'
+    | '/school/approvals'
     | '/school/settings'
     | '/school/students'
     | '/student/applications'
@@ -217,10 +249,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/search'
     | '/sitemap.xml'
+    | '/gov/admins'
+    | '/gov/approvals'
     | '/gov/logs'
     | '/gov/schools'
     | '/gov/students'
     | '/school/applications'
+    | '/school/approvals'
     | '/school/settings'
     | '/school/students'
     | '/student/applications'
@@ -238,10 +273,13 @@ export interface FileRouteTypes {
     | '/_authenticated/gov'
     | '/_authenticated/school'
     | '/_authenticated/student'
+    | '/_authenticated/gov/admins'
+    | '/_authenticated/gov/approvals'
     | '/_authenticated/gov/logs'
     | '/_authenticated/gov/schools'
     | '/_authenticated/gov/students'
     | '/_authenticated/school/applications'
+    | '/_authenticated/school/approvals'
     | '/_authenticated/school/settings'
     | '/_authenticated/school/students'
     | '/_authenticated/student/applications'
@@ -366,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolSettingsRouteImport
       parentRoute: typeof AuthenticatedSchoolRoute
     }
+    '/_authenticated/school/approvals': {
+      id: '/_authenticated/school/approvals'
+      path: '/approvals'
+      fullPath: '/school/approvals'
+      preLoaderRoute: typeof AuthenticatedSchoolApprovalsRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
     '/_authenticated/school/applications': {
       id: '/_authenticated/school/applications'
       path: '/applications'
@@ -394,10 +439,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGovLogsRouteImport
       parentRoute: typeof AuthenticatedGovRoute
     }
+    '/_authenticated/gov/approvals': {
+      id: '/_authenticated/gov/approvals'
+      path: '/approvals'
+      fullPath: '/gov/approvals'
+      preLoaderRoute: typeof AuthenticatedGovApprovalsRouteImport
+      parentRoute: typeof AuthenticatedGovRoute
+    }
+    '/_authenticated/gov/admins': {
+      id: '/_authenticated/gov/admins'
+      path: '/admins'
+      fullPath: '/gov/admins'
+      preLoaderRoute: typeof AuthenticatedGovAdminsRouteImport
+      parentRoute: typeof AuthenticatedGovRoute
+    }
   }
 }
 
 interface AuthenticatedGovRouteChildren {
+  AuthenticatedGovAdminsRoute: typeof AuthenticatedGovAdminsRoute
+  AuthenticatedGovApprovalsRoute: typeof AuthenticatedGovApprovalsRoute
   AuthenticatedGovLogsRoute: typeof AuthenticatedGovLogsRoute
   AuthenticatedGovSchoolsRoute: typeof AuthenticatedGovSchoolsRoute
   AuthenticatedGovStudentsRoute: typeof AuthenticatedGovStudentsRoute
@@ -405,6 +466,8 @@ interface AuthenticatedGovRouteChildren {
 }
 
 const AuthenticatedGovRouteChildren: AuthenticatedGovRouteChildren = {
+  AuthenticatedGovAdminsRoute: AuthenticatedGovAdminsRoute,
+  AuthenticatedGovApprovalsRoute: AuthenticatedGovApprovalsRoute,
   AuthenticatedGovLogsRoute: AuthenticatedGovLogsRoute,
   AuthenticatedGovSchoolsRoute: AuthenticatedGovSchoolsRoute,
   AuthenticatedGovStudentsRoute: AuthenticatedGovStudentsRoute,
@@ -416,6 +479,7 @@ const AuthenticatedGovRouteWithChildren =
 
 interface AuthenticatedSchoolRouteChildren {
   AuthenticatedSchoolApplicationsRoute: typeof AuthenticatedSchoolApplicationsRoute
+  AuthenticatedSchoolApprovalsRoute: typeof AuthenticatedSchoolApprovalsRoute
   AuthenticatedSchoolSettingsRoute: typeof AuthenticatedSchoolSettingsRoute
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
   AuthenticatedSchoolIndexRoute: typeof AuthenticatedSchoolIndexRoute
@@ -423,6 +487,7 @@ interface AuthenticatedSchoolRouteChildren {
 
 const AuthenticatedSchoolRouteChildren: AuthenticatedSchoolRouteChildren = {
   AuthenticatedSchoolApplicationsRoute: AuthenticatedSchoolApplicationsRoute,
+  AuthenticatedSchoolApprovalsRoute: AuthenticatedSchoolApprovalsRoute,
   AuthenticatedSchoolSettingsRoute: AuthenticatedSchoolSettingsRoute,
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
   AuthenticatedSchoolIndexRoute: AuthenticatedSchoolIndexRoute,

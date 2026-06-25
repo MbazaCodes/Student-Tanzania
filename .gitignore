@@ -45,3 +45,5 @@ Fix-TsidMigrations.ps1
 -e 
 # Lovable scaffold metadata (removed)
 .lovable/
+.vercel
+.env*
