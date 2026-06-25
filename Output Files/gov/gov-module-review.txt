@@ -1,0 +1,1562 @@
+
+====================================================
+src\routes\_authenticated\gov.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { PortalShell } from "@/components/tsid/portal-shell";
+import { useTheme } from "@/lib/theme";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { LayoutDashboard, Users, Building2, ScrollText, ShieldCheck, CheckSquare } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/gov")({
+  component: () => {
+    const { t } = useTheme();
+    const me = useCurrentUser();
+
+    const items = [
+      { to: "/gov",          label: t("nav_dashboard"), icon: <LayoutDashboard className="h-4 w-4" /> },
+      { to: "/gov/students", label: t("nav_students"),  icon: <Users className="h-4 w-4" /> },
+      { to: "/gov/schools",  label: t("nav_schools"),   icon: <Building2 className="h-4 w-4" /> },
+    ];
+
+    // Admins page only for National (tier 0) and Regional (tier 1)
+    if (me.tier === 0 || me.tier === 1) {
+      items.push({ to: "/gov/admins", label: "Administrators", icon: <ShieldCheck className="h-4 w-4" /> });
+    }
+
+    // Approvals (major student changes + school changes)
+    items.push({ to: "/gov/approvals", label: "Approvals", icon: <CheckSquare className="h-4 w-4" /> });
+
+    // Audit logs for everyone in gov
+    items.push({ to: "/gov/logs", label: t("nav_logs"), icon: <ScrollText className="h-4 w-4" /> });
+
+    // Title reflects tier
+    const title =
+      me.tier === 1 ? `${me.region} Regional` :
+      me.tier === 2 ? `${me.district} District` :
+      t("gov_title");
+
+    const subtitle =
+      me.tier === 1 ? "REGIONAL ADMIN" :
+      me.tier === 2 ? "DISTRICT ADMIN" :
+      t("gov_subtitle");
+
+    return <PortalShell title={title} subtitle={subtitle} items={items} />;
+  },
+});
+
+====================================================
+src\routes\_authenticated\gov.index.tsx
+====================================================
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useTheme } from "@/lib/theme";
+import { Users, Building2, FileCheck2, BadgeCheck, TrendingUp, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export const Route = createFileRoute("/_authenticated/gov/")({ component: GovDashboard });
+
+function GovDashboard() {
+  const me = useCurrentUser();
+  const { t } = useTheme();
+
+  const { data: kpis } = useQuery({
+    queryKey: ["gov-kpis"],
+    queryFn: async () => {
+      const [students, schools, apps, active, logs] = await Promise.all([
+        supabase.from("students").select("tsid",{count:"exact",head:true}),
+        supabase.from("schools").select("school_code",{count:"exact",head:true}),
+        supabase.from("applications").select("id",{count:"exact",head:true}).eq("status","pending"),
+        supabase.from("students").select("tsid",{count:"exact",head:true}).eq("status","active"),
+        supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(6),
+      ]);
+      return { students: students.count??0, schools: schools.count??0, apps: apps.count??0, active: active.count??0, recentLogs: logs.data??[] };
+    },
+  });
+  const { data: schoolsData=[] } = useQuery({ queryKey:["gov-schools-dash"], queryFn: async()=>(await supabase.from("schools").select("school_code,school_name,region,status").order("school_name").limit(5)).data??[] });
+  const { data: regionData=[] } = useQuery({ queryKey:["gov-regions"], queryFn: async()=>{
+    const {data:st}=await supabase.from("students").select("region");
+    const {data:sc}=await supabase.from("schools").select("region");
+    return [...new Set([...(st??[]).map((x)=>x.region),...(sc??[]).map((x)=>x.region)].filter(Boolean))] as string[];
+  }});
+
+  const tiles = [
+    {label:t("kpi_students"), value:kpis?.students??"—", icon:Users,       color:"var(--tz-green)"},
+    {label:t("kpi_active"),   value:kpis?.active??"—",   icon:BadgeCheck,   color:"var(--tz-blue)"},
+    {label:t("kpi_schools"),  value:kpis?.schools??"—",  icon:Building2,    color:"var(--tz-navy)"},
+    {label:t("kpi_pending_apps"),value:kpis?.apps??"—",  icon:FileCheck2,   color:"var(--tz-gold)"},
+  ];
+
+  const ACTION_COLORS: Record<string,string> = {
+    "school:create":"text-violet-700 bg-violet-50","student:create":"text-emerald-700 bg-emerald-50",
+    "auth:login":"text-blue-700 bg-blue-50","application:approve":"text-emerald-700 bg-emerald-50","application:reject":"text-red-700 bg-red-50",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-primary text-primary-foreground p-6 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-1">{t("gov_title")}</div>
+          <h1 className="text-2xl font-bold" style={{fontFamily:"var(--font-display)"}}>{t("gov_welcome")}</h1>
+          <p className="text-sm opacity-80 mt-1">{t("welcome_msg")}, <strong>{me.fullName??"Administrator"}</strong> · {t("gov_welcome_sub")}</p>
+        </div>
+        <Button asChild variant="secondary"><Link to="/gov/schools"><Plus className="h-4 w-4 mr-1"/>{t("gov_register_school")}</Link></Button>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {tiles.map((tile)=>(
+          <div key={tile.label} className="rounded-2xl border bg-card p-5">
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white" style={{background:tile.color}}><tile.icon className="h-4 w-4"/></div>
+            <div className="mt-3 text-3xl font-bold">{tile.value}</div>
+            <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{tile.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          {label:t("kpi_regions"),  value:regionData.length, icon:TrendingUp},
+          {label:t("kpi_approved"), value:"—",                icon:BadgeCheck},
+          {label:t("kpi_verified"), value:schoolsData.filter((s)=>s.status==="active").length, icon:Building2},
+        ].map(tile=>(
+          <div key={tile.label} className="rounded-xl border bg-card p-4 flex items-center gap-3">
+            <tile.icon className="h-6 w-6 text-muted-foreground flex-shrink-0"/>
+            <div><div className="text-xl font-bold">{tile.value}</div><div className="text-xs text-muted-foreground">{tile.label}</div></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-2xl border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <span className="font-semibold text-sm">🏫 {t("registered_schools")}</span>
+            <Link to="/gov/schools" className="text-xs text-primary hover:underline">{t("manage_arrow")}</Link>
+          </div>
+          {schoolsData.length===0 ? <p className="px-4 py-8 text-sm text-center text-muted-foreground">{t("no_schools")}</p> : (
+            <table className="w-full text-sm"><thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr><th className="px-4 py-2 text-left">{t("col_code")}</th><th className="px-4 py-2 text-left">{t("col_school")}</th><th className="px-4 py-2 text-left">{t("col_region")}</th><th className="px-4 py-2 text-left">{t("col_status")}</th></tr>
+            </thead><tbody>
+              {schoolsData.map((s)=>(
+                <tr key={s.school_code} className="border-t">
+                  <td className="px-4 py-2 font-mono text-xs text-primary font-bold">{s.school_code}</td>
+                  <td className="px-4 py-2 font-medium">{s.school_name}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">{s.region??"—"}</td>
+                  <td className="px-4 py-2"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${s.status==="active"?"bg-emerald-100 text-emerald-800":"bg-amber-100 text-amber-800"}`}>{s.status==="active"?t("active"):t("pending")}</span></td>
+                </tr>
+              ))}
+            </tbody></table>
+          )}
+        </div>
+
+        <div className="rounded-2xl border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <span className="font-semibold text-sm">📋 {t("recent_activity")}</span>
+            <Link to="/gov/logs" className="text-xs text-primary hover:underline">{t("see_all")}</Link>
+          </div>
+          {(kpis?.recentLogs??[]).length===0 ? <p className="px-4 py-8 text-sm text-center text-muted-foreground">{t("no_activity")}</p> : (
+            <div className="divide-y">
+              {(kpis?.recentLogs??[]).map((l)=>(
+                <div key={l.id} className="px-4 py-3 flex items-start gap-3">
+                  <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap flex-shrink-0 ${ACTION_COLORS[l.action]??"bg-muted text-muted-foreground"}`}>
+                    {l.action.split(":")[1]??l.action}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-sm truncate">{l.message??l.action}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{l.by_name??"system"} · {new Date(l.created_at).toLocaleString("en-TZ",{dateStyle:"short",timeStyle:"short"})}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+====================================================
+src\routes\_authenticated\gov.students.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "@/lib/theme";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
+
+export const Route = createFileRoute("/_authenticated/gov/students")({ component: Page });
+
+function Page() {
+  const { t } = useTheme();
+  const qc = useQueryClient();
+  const [search, setSearch] = useState(""); const [regionFilter, setRegionFilter] = useState("");
+  const [profileTsid, setProfileTsid] = useState<string | null>(null);
+
+  const { data: students=[] } = useQuery({ queryKey:["gov-students"], queryFn: async()=>(await supabase.from("students").select("tsid,fullname,dob,gender,photo,status,level,region,district,school_code,school_name,created_at").order("created_at",{ascending:false})).data??[] });
+  const { data: schools=[]  } = useQuery({ queryKey:["gov-schools-light"], queryFn: async()=>(await supabase.from("schools").select("school_code,school_name,region")).data??[] });
+
+  const regions=[...new Set(schools.map((s)=>s.region).filter(Boolean))] as string[];
+  const filtered=students.filter((st)=>{
+    const q=search.toLowerCase();
+    return(!q||st.fullname.toLowerCase().includes(q)||st.tsid.toLowerCase().includes(q)||(st.school_name??"").toLowerCase().includes(q))
+      &&(!regionFilter||(st.region??"")===regionFilter);
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-primary" style={{fontFamily:"var(--font-display)"}}>{t("nat_db")}</h1>
+        <p className="text-sm text-muted-foreground">{students.length} {t("nat_db_sub")} {schools.length} {t("schools_in")} {regions.length} {t("regions_text")}</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          {label:t("total_students"), value:students.length, color:"var(--tz-navy)"},
+          {label:t("active_ids"),     value:students.filter((s)=>s.status==="active").length, color:"var(--tz-green)"},
+          {label:t("kpi_schools"),    value:schools.length,  color:"var(--tz-blue)"},
+          {label:t("kpi_regions"),    value:regions.length,  color:"var(--tz-gold)"},
+        ].map(tile=>(
+          <div key={tile.label} className="rounded-2xl border bg-card p-5">
+            <div className="text-2xl font-bold" style={{color:tile.color}}>{tile.value}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{tile.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Input className="max-w-xs" placeholder={t("search_placeholder")} value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select className="rounded-md border bg-background px-3 py-2 text-sm" value={regionFilter} onChange={e=>setRegionFilter(e.target.value)}>
+          <option value="">{t("all_regions")}</option>
+          {regions.map(r=><option key={r} value={r}>{r}</option>)}
+        </select>
+        <span className="self-center text-xs text-muted-foreground">{filtered.length} {t("results_pl")}</span>
+      </div>
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">{t("col_photo")}</th><th className="px-4 py-3">{t("col_student")}</th>
+                <th className="px-4 py-3">{t("col_school")}</th><th className="px-4 py-3">{t("col_region")}</th>
+                <th className="px-4 py-3">{t("col_level")}</th><th className="px-4 py-3">{t("col_status")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((st)=>(
+                <tr key={st.tsid} className="border-t hover:bg-muted/20 cursor-pointer" onClick={() => setProfileTsid(st.tsid)}>
+                  <td className="px-4 py-2">{st.photo?<img src={st.photo} className="w-9 h-12 object-cover rounded-md border" alt=""/>:<div className="w-9 h-12 rounded-md border bg-muted flex items-center justify-center text-lg">👤</div>}</td>
+                  <td className="px-4 py-3"><div className="font-semibold">{st.fullname}</div><div className="text-xs font-mono text-muted-foreground">{st.tsid}</div><div className="text-xs text-muted-foreground">{st.gender??"—"} · {st.dob??"—"}</div></td>
+                  <td className="px-4 py-3"><div className="text-sm font-medium">{st.school_name??"—"}</div><div className="text-xs font-mono text-muted-foreground">{st.school_code??""}</div></td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{st.region??"—"}</td>
+                  <td className="px-4 py-3 text-sm">{st.level??"—"}</td>
+                  <td className="px-4 py-3"><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.status==="active"?"bg-emerald-100 text-emerald-800":"bg-red-100 text-red-800"}`}>{st.status==="active"?t("active"):t("inactive")}</span></td>
+                </tr>
+              ))}
+              {filtered.length===0&&<tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">{search||regionFilter?t("no_match"):t("no_students_yet")}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {profileTsid && (
+        <StudentProfileDrawer
+          tsid={profileTsid}
+          viewerRole="admin"
+          onClose={() => setProfileTsid(null)}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["gov-students"] })}
+        />
+      )}
+    </div>
+  );
+}
+
+====================================================
+src\routes\_authenticated\gov.schools.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useState } from "react";
+import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound, Upload } from "lucide-react";
+import { BulkUpload } from "@/components/tsid/bulk-upload";
+
+export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
+
+type SchoolType = string;
+
+const SCHOOL_TYPES: SchoolType[] = [
+  "Pre-School / Nursery",
+  "Primary School",
+  "Secondary School",
+  "University / College",
+  "Vocational Training",
+  "Special Needs School",
+];
+
+// Tanzania Regions → Districts → Wards
+const TZ_GEO: Record<string, Record<string, string[]>> = {
+  "Arusha": {
+    "Arusha CC": ["Elerai","Engutoto","Kati","Kimandolu","Levolosi","Muriet","Nessuit","Ngarenaro","Olasiti","Sekei","Sokon I","Sokon II","Themi","Unga Limited","Uwanja wa Ndege"],
+    "Arusha DC": ["Bwawani","Ilkiurei","Kimnyaki","Kiranyi","Kiserian","Lekitatu","Maroroni","Mlangarini","Moshono","Mwandet","Nduruma","Ngarenanyuki","Oldonyosambu","Olmolog","Oltrumet","Osunyai","Poli","Qarus","Seliani","Sura","Tml"],
+    "Karatu": ["Buger","Endabash","Endamaghang","Galappo","Karatu","Kilimatembo","Kansay","Mangola","Mbulumbulu","Quiloto","Rhotia","Tloma"],
+    "Longido": ["Gelai Bomba","Gelai Lumbwa","Kimokouwa","Lengijave","Matale","Mifugo","Mundarara","Naberera","Ngereyani","Oltepesi","Orng'arwa","Pakasi","Tingatinga"],
+    "Monduli": ["Engare Nairobi","Esilalei","Lolkisale","Makuyuni","Manyara","Monduli","Monduli Juu","Mto wa Mbu","Naitolia","Selela"],
+    "Ngorongoro": ["Alailelai","Digodigo","Endulen","Kakesio","Loosoito","Maaloni","Malambo","Mateves","Nainokanoka","Ndutu","Ng'iresi","Ngorongoro","Olbalbal","Oloirien","Olpiro","Olyoirobi","Piyaya","Sale"],
+  },
+  "Dar es Salaam": {
+    "Ilala MC": ["Buguruni","Chang'ombe","Charambe","Gerezani","Ilala","Jangwani","Kariakoo","Kisutu","Kitunda","Kivukoni","Mchikichini","Msongola","Mtambani","Vingunguti"],
+    "Kinondoni MC": ["Bonyokwa","Bunju","Goba","Kawe","Kibamba","Kigogo","Kijitonyama","Kinondoni","Kunduchi","Kwembe","Mabibo","Magomeni","Makuburi","Makurumla","Manzese","Mbezi","Mburahati","Mwananyamala","Ndugumbi","Oysterbay","Tandale","Ubungo","Wazo"],
+    "Temeke MC": ["Azimio","Chamazi","Chang'ombe","Charambe","Keko","Kibondemaji","Kigamboni","Kurasini","Mbagala","Mjimwema","Mtoni","Pemba Mnazi","Sandali","Somangira","Temeke","Toangoma","Tupendane","Yombo Vituka"],
+    "Ubungo MC": ["Goba","Kibamba","Kimara","Kwembe","Mbezi","Saranga","Sinza","Ubungo"],
+    "Kigamboni MC": ["Kigamboni","Kibondemaji","Mjimwema","Somangira","Tuangoma","Kibamba"],
+  },
+  "Dodoma": {
+    "Dodoma CC": ["Chalinze","Chang'ombe","Dodoma Urban","Ipagala","Kikuyu","Kikombo","Kilimani","Kisasa","Makole","Makorora","Mbwanga","Msalato","Mtumba","Muungano","Nzuguni"],
+    "Bahi": ["Bahi","Chipanga","Handali","Ikoja","Ilolo","Itiso","Kibakwe","Kigwe","Makang'wa","Mbalawala","Mpamantwa","Msisi","Mundemu"],
+    "Chamwino": ["Buigiri","Chamwino","Chipanga","Galigali","Ikowa","Ihumwa","Ipala","Isanga","Makutopora","Matumbulu","Nala","Nzasa","Seriani"],
+    "Kondoa": ["Bereko","Bolisa","Bumbuta","Haubi","Itololo","Kiberashi","Kikore","Kinango","Kolo","Kondoa","Lalaji","Masange","Mondo","Mrijo Chini"],
+    "Mpwapwa": ["Berege","Chipogoro","Chunyu","Godegode","Kibakwe","Kifimbo","Mima","Mpwapwa","Rudi","Wotta"],
+  },
+  "Geita": {
+    "Geita TC": ["Butimba","Geita","Ilemela","Kalangalala","Katoro","Lubaga"],
+    "Bukombe": ["Bukombe","Iponjola","Ushirombo","Uswagwa"],
+    "Chato": ["Bwanga","Chato","Ilemela","Katoro","Murutunguru"],
+    "Mbogwe": ["Bulyanhulu","Iyenze","Karumo","Mbogwe","Nyangh'wale"],
+    "Nyang'hwale": ["Idukilo","Mwingiro","Nyang'hwale","Nyantira"],
+  },
+  "Iringa": {
+    "Iringa MC": ["Idodi","Ifunda","Ilula","Iringa Urban","Kalenga","Kilolo","Mafinga","Mtwivila","Nduli","Pawaga","Tosamaganga"],
+    "Iringa DC": ["Idodi","Ifunda","Kalenga","Kilolo","Mafinga","Mtwivila","Nduli","Pawaga"],
+    "Kilolo": ["Idete","Kilolo","Kimala","Kiponzelo","Magulilwa","Mahenge","Mfrikano","Mseke","Munisagara","Mwembe","Tagamenda","Uhafiwa"],
+    "Mufindi": ["Ifwagi","Igomaa","Ikangaivwi","Imalinyi","Kasanga","Mafinga","Mbalamaziwa","Mdabulo","Mgololo","Mtwango","Mufindi","Ruaha"],
+  },
+  "Kagera": {
+    "Bukoba MC": ["Bukoba","Butuja","Hamugembe","Kahororo","Kibeta","Korera","Lugalo","Maruku","Nyakishaka"],
+    "Bukoba DC": ["Butayunja","Kabirizi","Katerero","Kibuyuni","Kyamulaile","Maruku","Nshamba","Rubale","Ruhunga"],
+    "Biharamulo": ["Biharamulo","Bukiriro","Buyaga","Kayenzi","Lusahunga","Muganza","Murutunguru","Nyantakara","Runazi"],
+    "Karagwe": ["Bugomora","Bweranyange","Ihembe","Iyobozi","Kayanga","Kerenge","Kibale","Kituntu","Maruku","Murongo"],
+    "Kyerwa": ["Bugomora","Chonyonyo","Kaisho","Kanoni","Mataba","Murongo","Nyakabanga","Nyakayanja","Ruziba"],
+    "Misenyi": ["Bunazi","Kabango","Kafunzo","Kakunyu","Kashai","Kyaka","Minziro","Rulenge"],
+    "Muleba": ["Buhendangabo","Bujugo","Bubeke","Bwanjai","Ibuga","Ijumbi","Kagoma","Kasharu","Kibingo","Muleba","Nshamba","Nyabionza"],
+    "Ngara": ["Benaco","Bugarama","Kasulo","Kibimba","Kinazi","Muganza","Murongo","Nkora","Rulenge","Rusumo"],
+  },
+  "Katavi": {
+    "Mpanda MC": ["Kakese","Mpanda","Inyonga","Mishamo"],
+    "Mpanda DC": ["Inyonga","Karema","Kipili","Laela","Mishamo","Mpanda","Nsimbo"],
+    "Mlele": ["Katumba","Mamba","Mlele","Mpanda","Nsimba"],
+  },
+  "Kigoma": {
+    "Kigoma-Ujiji MC": ["Gungu","Kagera","Kigoma","Nkuruma","Remera","Ujiji"],
+    "Buhigwe": ["Buhigwe","Muyama","Nguruka","Uvinza"],
+    "Kakonko": ["Kakonko","Kasanda","Mugunzu","Nyamtukuza","Rugongwe"],
+    "Kasulu": ["Kasulu","Kibondo","Manyovu","Murgwanza","Nyarugusu"],
+    "Kibondo": ["Kibondo","Kumsenga","Mugunzu","Nyarugusu","Rugombo"],
+    "Kigoma DC": ["Buhingu","Kigoma","Kigoma Kasimba","Mwandiga","Ujiji"],
+    "Uvinza": ["Ilagala","Igalula","Simbo","Uvinza","Vikonge"],
+  },
+  "Kilimanjaro": {
+    "Moshi MC": ["Kaloleni","Kiboriloni","Kimanthi","Longuo A","Longuo B","Mawenzi","Mjini","Rau","Shantytown","Soweto"],
+    "Hai": ["Bomang'ombe","Boma la Ng'ombe","Machame","Masama","Mbokomu","Moshi","Nkuu","Old Moshi","Sanya Juu"],
+    "Moshi DC": ["Kirua Vunjo","Longuo","Mamba","Moshi","Old Moshi","Uru","Vunjo"],
+    "Mwanga": ["Kihurio","Lembeni","Mwanga","Ngujini","Rundugai","Same"],
+    "Rombo": ["Boro","Holili","Keni","Kiboriloni","Mkuu","Rombo","Useri"],
+    "Same": ["Chome","Goha","Hedaru","Kihurio","Kisiwani","Lembeni","Makanya","Mamba","Same","Toloha"],
+    "Siha": ["Kishisha","Longuo","Sanya","Siha","Soko"],
+  },
+  "Lindi": {
+    "Lindi MC": ["Lindi","Chikundi","Mitwero","Ndoro","Rasbura"],
+    "Kilwa": ["Kilwa Kisiwani","Kilwa Kivinje","Kilwa Masoko","Nangurukuru","Njinjo","Nkowe","Somanga"],
+    "Lindi DC": ["Chikonji","Kiranjeranje","Lindi","Mandawa","Mnolela","Mtama","Mwenge","Nyangao"],
+    "Liwale": ["Liwale","Nalasi","Nawenge","Ngarama","Ngongowele"],
+    "Nachingwea": ["Chimbuko","Kilimarondo","Mahiwa","Nachingwea","Naikiu","Nanganga","Namalenga","Ruponda"],
+    "Ruangwa": ["Chienjere","Mlawe","Nandonde","Nanganga","Ruangwa","Rushwa"],
+  },
+  "Manyara": {
+    "Babati TC": ["Babati","Dareda","Gallapo","Madunga","Managhat","Mwada","Ndalat","Ufana"],
+    "Babati DC": ["Bashnet","Dabil","Dareda","Gallapo","Gichameda","Haraa","Magugu","Magungu","Managhat","Mbuguni","Mwada","Ndalat","Seloto"],
+    "Hanang": ["Basotu","Dabil","Endasak","Gawal","Gidahababieg","Hirbadaw","Katesh","Mureru","Nangwa","Simbay"],
+    "Kiteto": ["Dosidosi","Engusero","Kibaya","Kimotorok","Laiseri","Lengatei","Ngorika","Songambele"],
+    "Mbulu": ["Balaaa","Daudi","Dongobesh","Gehandu","Hadza","Haydom","Ilkiushu","Karatu","Labay","Maretadu","Mbulu","Seloto"],
+    "Simanjiro": ["Emboret","Kimotorok","Loiborsireet","Makuyuni","Msitu wa Tembo","Naberera","Ngage","Ngurunit","Nkoaranga","Orkesumet","Sukuro"],
+  },
+  "Mara": {
+    "Musoma MC": ["Buhare","Iringo","Makoko","Mugango","Musoma","Nyakato","Nyamagana"],
+    "Butiama": ["Butiama","Kisangura","Komarera","Kyandege","Mugeta","Nyichoka","Rorya"],
+    "Musoma DC": ["Bunda","Kiabakari","Mugumo","Musoma","Nyakanga","Obulangeti","Roche"],
+    "Rorya": ["Kowak","Mchauru","Mugango","Nyamwaga","Rorya","Shirati"],
+    "Serengeti": ["Mugumu","Nata","Nyamuma","Robanda","Isenye","Mbiso"],
+    "Tarime": ["Borega","Gorong'a","Kemathe","Kerende","Kiserogota","Nyansincha","Sirari","Tarime","Turwa"],
+  },
+  "Mbeya": {
+    "Mbeya CC": ["Forest","Iyela","Jacaranda","Kalobe","Lwanjilo","Mbeya","Mwanjelwa","Nsalaga","Sisimba","Uyole"],
+    "Busokelo": ["Ipinda","Kabula","Lufilyo","Masoko","Ngosi","Rungwe"],
+    "Chunya": ["Chunya","Ifumbo","Lupa","Mtanila","Ngwala","Songwe"],
+    "Mbarali": ["Chimala","Igurusi","Itagata","Mbarali","Rujewa","Utengule Usongwe"],
+    "Mbeya DC": ["Inyala","Iwindi","Lufubu","Mbeya","Mwansekwa","Nsalaga","Ulenje"],
+    "Rungwe": ["Ibula","Isongole","Kiwira","Makwale","Mwakaleli","Nkuka","Rungwe","Tukuyu"],
+  },
+  "Morogoro": {
+    "Morogoro MC": ["Bigwa","Bonde","Chamwino","Kilakala","Kichangani","Kihonda","Kingolwira","Kiroka","Mazimbu","Mji Mkuu","Mwembesongo","Sabasaba","Saba Saba"],
+    "Gairo": ["Gairo","Idibo","Ilakala","Itiso","Nongwe","Rudewa","Ulaya"],
+    "Ifakara": ["Ifakara","Igima","Katindiuka","Lupiro","Minepa","Mlimba"],
+    "Kilosa": ["Dumila","Kilosa","Kimamba","Mikumi","Msowero","Rudewa","Ulaya"],
+    "Kilombero": ["Ifakara","Mwaya","Sanje"],
+    "Malinyi": ["Malinyi","Mbogo","Mlimba"],
+    "Morogoro DC": ["Kiroka","Mzumbe","Ngerengere","Mkuyuni","Mvomero"],
+    "Mvomero": ["Hembeti","Kibati","Kigugu","Mziha","Turiani"],
+    "Ulanga": ["Kilosa","Lupiro","Mahenge","Malinyi","Msogezi","Vigoi"],
+  },
+  "Mtwara": {
+    "Mtwara-Mikindani MC": ["Chikongola","Mtwara","Mikindani","Shangani","Magomeni"],
+    "Masasi": ["Chiwale","Chiungutwa","Luchelegwa","Masasi","Mbua","Mchauru","Mihambwe","Mtama","Nanyamba","Ruponda"],
+    "Mtwara DC": ["Dihimba","Kitangari","Lulindi","Mkomaindo","Namanga","Ntomoko","Rwelu"],
+    "Nanyumbu": ["Lukuledi","Mkangala","Nanyumbu","Naumbu","Ntomoko"],
+    "Newala": ["Chichiwe","Mahuta","Namikupa","Newala","Ntomoko","Ntwari","Pemba"],
+    "Tandahimba": ["Chiponda","Luchelegwa","Mkomaindo","Mnacho","Namikupa","Nanyamba","Tandahimba"],
+  },
+  "Mwanza": {
+    "Mwanza CC": ["Bugando","Buswelu","Butimba","Igogo","Ilemela","Kirumba","Kitangiri","Lwanhima","Mbugani","Mkuyuni","Nyamagana","Pamba","Pasiansi","Shibula"],
+    "Ilemela MC": ["Bugando","Ilemela","Kirumba","Lwanhima","Mkuyuni","Nyamagana","Shibula"],
+    "Kwimba": ["Bupamwa","Dutwa","Hungumalwa","Kikoa","Lubiri","Magu","Nkome","Sumve"],
+    "Magu": ["Kabila","Lubiri","Magu","Nyigamba","Shishiyu","Sumve"],
+    "Misungwi": ["Igokelo","Kijima","Magu","Misungwi","Ngudu","Nyamilama"],
+    "Sengerema": ["Busisi","Igara","Nyampande","Nyehunge","Sengerema"],
+    "Ukerewe": ["Bwiro","Kagunguli","Murutunguru","Namagondo","Nkilizya","Ukara","Ukerewe"],
+  },
+  "Njombe": {
+    "Njombe TC": ["Njombe","Igagala","Imalinyi","Lupembe","Makambako"],
+    "Ludewa": ["Ludewa","Manda","Mlangali","Mkiu","Iyayi"],
+    "Makete": ["Bulongwa","Iwela","Kindamba","Makete","Mapanda"],
+    "Njombe DC": ["Igagala","Imalinyi","Lupembe","Makambako","Njombe"],
+    "Wanging'ombe": ["Imalinyi","Igima","Mdandu","Ulembwe","Wanging'ombe"],
+  },
+  "Pemba North": {
+    "Micheweni": ["Chambani","Konde","Maziwa Ng'ombe","Mgogoni","Micheweni","Njuguni","Wingwi"],
+    "Wete": ["Gando","Kinyasini","Kojani","Maziwa Ng'ombe","Ole","Pujini","Wete"],
+  },
+  "Pemba South": {
+    "Chake Chake": ["Chake Chake","Madungu","Makombeni","Mchanga Mdogo","Pujini","Vitongoji","Ziwani"],
+    "Mkoani": ["Chole","Kengeja","Kichunguu","Kiuyu","Mkoani","Ole","Pujini","Wawi"],
+  },
+  "Pwani": {
+    "Bagamoyo": ["Bagamoyo","Dunda","Kaole","Kerege","Kiromo","Miono","Msata","Zinga"],
+    "Kibaha TC": ["Kibaha","Kwala","Mlandizi","Msata"],
+    "Kibaha DC": ["Kibaha","Mlandizi","Msata","Ruvu"],
+    "Kisarawe": ["Kisewe","Kisarawe","Kurui","Makurunge","Mtamba","Vikumburu"],
+    "Mafia": ["Bweni","Jibondo","Juani","Kilindoni","Kirongwe","Kiegeani"],
+    "Mkuranga": ["Kibiti","Mkuranga","Msanga","Mtawanya","Vikindu"],
+    "Rufiji": ["Ikwiriri","Kibiti","Mohoro","Mwaseni","Nyamisati","Utete"],
+  },
+  "Rukwa": {
+    "Sumbawanga MC": ["Ilemba","Kala","Katazi","Kipande","Kirando","Nkundi","Sumbawanga"],
+    "Kalambo": ["Kirando","Laela","Matai","Ninde","Nkweto","Nzovwe","Titye"],
+    "Nkasi": ["Chala","Ilemba","Kirando","Nkasi","Wampembe"],
+    "Sumbawanga DC": ["Chapota","Ilemba","Katazi","Kipande","Sumbawanga","Nkundi"],
+  },
+  "Ruvuma": {
+    "Songea MC": ["Mfaranyaki","Mji Mpya","Mjimwema","Songea","Ruhuwiko"],
+    "Mbinga": ["Kigonsera","Litembo","Mbamba Bay","Mbinga","Mkongo","Mtiri","Muungano"],
+    "Namtumbo": ["Gumbiro","Kihagara","Madaba","Namtumbo","Namabengo"],
+    "Nyasa": ["Liuli","Mbamba Bay","Mkenda","Mkongo","Nyasa"],
+    "Songea DC": ["Gumbiro","Kigonsera","Madaba","Songea","Ruhuwiko"],
+    "Tunduru": ["Nakapanya","Nalasi","Namtumbo","Tunduru"],
+  },
+  "Shinyanga": {
+    "Shinyanga MC": ["Kambarage","Kizumbi","Lubaga","Malagarasi","Mjini","Sabasaba","Shinyanga"],
+    "Kahama TC": ["Isaka","Kahama","Kaseme","Mwakitolyo","Nzega"],
+    "Kahama DC": ["Bugarama","Isaka","Kahama","Lunguya","Masunga","Ndolage","Nzega","Salawe"],
+    "Kishapu": ["Ihanda","Kishapu","Mwamapalala","Mwanangwa","Ndagalu","Tinde"],
+    "Shinyanga DC": ["Ikungu","Kambarage","Mwadui","Samuye","Utemini","Usanda"],
+  },
+  "Simiyu": {
+    "Bariadi TC": ["Bariadi","Isanga","Lalago","Mwabayanda","Mwanjolo"],
+    "Bariadi DC": ["Bariadi","Isanga","Lalago","Mwabayanda","Mwanjolo","Nguliguli"],
+    "Busega": ["Badi","Busega","Dutwa","Lugata","Maliti","Mwamashimba"],
+    "Itilima": ["Bariadi","Itilima","Mwanhuzi","Ntuzu","Seke"],
+    "Maswa": ["Gumali","Isaka","Kinangiri","Malampaka","Maswa","Mwanhuzi","Nguliguli"],
+    "Meatu": ["Dutwa","Mwabayanda","Mwanjolo","Nkula","Nguliguli","Tinde"],
+  },
+  "Singida": {
+    "Singida MC": ["Iguguno","Ikungi","Ilongero","Isimani","Puna","Singida"],
+    "Ikungi": ["Iguguno","Ikungi","Ilongero","Isimani","Mungaa","Nkinto"],
+    "Iramba": ["Iguguno","Iramba","Kiomboi","Mwanga","Ntuntu"],
+    "Manyoni": ["Itigi","Kintinku","Manyoni","Mkwese","Nkinto","Sanjaranda"],
+    "Singida DC": ["Ilongero","Isimani","Mungaa","Puma","Singida","Unyihe"],
+  },
+  "Songwe": {
+    "Momba": ["Chinya","Ivuna","Kapele","Kaseye","Momba","Ndaga"],
+    "Mbozi": ["Ihanda","Isangati","Kayula","Mbozi","Mlowo","Nteba","Vwawa"],
+    "Songwe": ["Mlowo","Songwe","Vwawa"],
+    "Tunduma TC": ["Lupa","Manda","Mlowo","Tunduma"],
+  },
+  "Tabora": {
+    "Tabora MC": ["Cheyo","Gongoni","Ipuli","Isevya","Kampisakatoto","Kanyenye","Mtendeni","Ng'ambo","Tumbi"],
+    "Igunga": ["Igunga","Igurubi","Mwanzugi","Ndevelwa","Nzega"],
+    "Kaliua": ["Inyonga","Kaliua","Kamsamba","Ukumbi"],
+    "Nzega": ["Itobo","Ndevelwa","Nzega","Puge"],
+    "Sikonge": ["Igalula","Itigi","Sikonge","Mwese"],
+    "Tabora DC": ["Cheyo","Kampisakatoto","Kanyenye","Tumbi","Utemini"],
+    "Urambo": ["Ichemba","Kaliua","Ulyankulu","Urambo"],
+    "Uyui": ["Igalula","Isevya","Itembo","Mbugwe","Uyui"],
+  },
+  "Tanga": {
+    "Tanga CC": ["Chumbageni","Duga","Makorora","Marungu","Maweni","Mzingani","Ngamiani","Pongwe","Rangi","Tanga"],
+    "Handeni": ["Handeni","Kwamasimba","Kideleko","Misozwe","Mgambo","Sindeni"],
+    "Kilindi": ["Handeni","Kigombe","Kilindi","Lushoto","Mgambo"],
+    "Korogwe TC": ["Korogwe","Makorora","Maweni","Mazinde"],
+    "Korogwe DC": ["Bungu","Korogwe","Magamba","Maweni","Mazinde","Mkumbara"],
+    "Lushoto": ["Gare","Lushoto","Magamba","Mlalo","Mtae","Soni","Sunga"],
+    "Mkinga": ["Daluni","Kasera","Mkinga","Muungano","Ngomeni"],
+    "Muheza": ["Amani","Maramba","Mkinga","Muheza","Ndola","Tongwe"],
+    "Pangani": ["Bweni","Kabuku","Kipumbwi","Mkwaja","Pangani","Ushongo"],
+  },
+  "Unguja North": {
+    "Kaskazini A": ["Donge","Kijini","Mkwajuni","Nungwi","Tumbatu"],
+    "Kaskazini B": ["Matemwe","Mkwajuni","Pwani Mchangani","Tumbatu"],
+  },
+  "Unguja South": {
+    "Kusini": ["Chwaka","Fumba","Kibele","Kiongoni","Koani","Muyuni","Paje","Uzini"],
+    "Kati": ["Bwejuu","Charawe","Dunga","Chwaka","Mkokotoni","Muyuni"],
+  },
+  "Zanzibar": {
+    "Mjini": ["Fundo","Gulioni","Kikwajuni","Kisiwandui","Kivunge","Magogoni","Mchangani","Mchauru","Mji Mkongwe","Mlandege","Ng'ambo","Shangani","Stone Town","Vikokotoni"],
+    "Magharibi A": ["Bububu","Fuoni","Imbomba","Kizenga","Mwanakwerekwe","Mwera","Tumbe"],
+    "Magharibi B": ["Chuini","Fuoni","Imbomba","Kiembe Samaki","Mwanakwerekwe","Tumbe"],
+  },
+};
+
+const REGION_PREFIX: Record<string, string> = {
+  "Dar es Salaam":"DS","Arusha":"AR","Mbeya":"MB","Dodoma":"DO","Mwanza":"MW",
+  "Tanga":"TG","Morogoro":"MO","Kagera":"KG","Kigoma":"KI","Lindi":"LD",
+  "Mara":"MR","Mtwara":"MT","Pwani":"PW","Rukwa":"RK","Shinyanga":"SH",
+  "Singida":"SG","Tabora":"TB","Geita":"GT","Katavi":"KV","Njombe":"NJ",
+  "Simiyu":"SM","Songwe":"SW","Ruvuma":"RV","Iringa":"IR","Kilimanjaro":"KL",
+  "Manyara":"MY","Pemba North":"PN","Pemba South":"PS","Unguja North":"UN",
+  "Unguja South":"US","Zanzibar":"ZB",
+};
+
+function genCode(region: string) {
+  const prefix = REGION_PREFIX[region] ?? region.slice(0,2).toUpperCase();
+  return `${prefix}${Math.floor(1000 + Math.random()*9000)}`;
+}
+function genPassword() {
+  return "sc" + Math.random().toString(36).slice(2,8).toUpperCase() + "!";
+}
+
+function Page() {
+  const qc = useQueryClient();
+  const me = useCurrentUser();
+  const [open, setOpen] = useState(false);
+
+  const { data: schools = [] } = useQuery({
+    queryKey: ["gov-schools"],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes,auth_uid,email").order("school_name")).data ?? [],
+  });
+
+  async function toggleStatus(code: string, currentStatus: string) {
+    const next = currentStatus === "active" ? "suspended" : "active";
+    const { error } = await supabase.from("schools").update({ status: next }).eq("school_code", code);
+    if (error) toast.error(error.message);
+    else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["gov-schools"] }); }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Schools</h1>
+          <p className="text-sm text-muted-foreground">Register institutions and issue their admin credentials.</p>
+        </div>
+        <div className="flex gap-2">
+        <BulkSchoolUpload actorName={me.fullName ?? "Gov Admin"} me={me} onDone={() => qc.invalidateQueries({ queryKey: ["gov-schools"] })} />
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary"><Plus className="h-4 w-4 mr-2" /> Register school</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Register New School</DialogTitle></DialogHeader>
+            <RegisterSchoolForm
+              actorName={me.fullName ?? "Gov Admin"}
+              onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["gov-schools"] }); }}
+            />
+          </DialogContent>
+        </Dialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Total schools", value: schools.length },
+          { label: "Active", value: schools.filter((s) => s.status === "active").length },
+          { label: "Suspended", value: schools.filter((s) => s.status !== "active").length },
+        ].map((t) => (
+          <div key={t.label} className="rounded-2xl border bg-card p-4">
+            <div className="text-2xl font-bold">{t.value}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">Registered schools ({schools.length})</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">School</th><th className="px-4 py-3">Region</th><th className="px-4 py-3">Login</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+            </thead>
+            <tbody>
+              {schools.map((s) => (
+                <tr key={s.school_code} className="border-t hover:bg-muted/20">
+                  <td className="px-4 py-3 font-mono text-xs text-primary font-bold">{s.school_code}</td>
+                  <td className="px-4 py-3">
+                    <div className="font-semibold">{s.school_name}</div>
+                    <div className="text-xs text-muted-foreground">{s.type}</div>
+                    {s.notes && <div className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1"><StickyNote className="h-3 w-3 mt-0.5 shrink-0" />{s.notes}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{s.region}{s.district ? ` · ${s.district}` : ""}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{s.cred_username}</td>
+                  <td className="px-4 py-3">
+                    {s.status === "active"
+                      ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><BadgeCheck className="h-3.5 w-3.5" /> Active</span>
+                      : <span className="inline-flex items-center gap-1 text-muted-foreground text-xs"><BadgeX className="h-3.5 w-3.5" /> {s.status}</span>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => toggleStatus(s.school_code, s.status)} title={s.status === "active" ? "Suspend" : "Activate"}>
+                        {s.status === "active" ? <BadgeX className="h-3.5 w-3.5" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+                      </Button>
+                      {/* Reset password — available to all gov admins (scope-enforced server-side) */}
+                      <ResetSchoolPassword school={s} />
+                      {/* Edit + delete — National only */}
+                      {me.tier === 0 && (
+                        <SchoolActions school={s} actorName={me.fullName ?? "Gov Admin"}
+                          onChange={() => qc.invalidateQueries({ queryKey: ["gov-schools"] })} />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {schools.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No schools registered yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: () => void }) {
+  const [name, setName]         = useState("");
+  const [type, setType]         = useState<SchoolType>("Primary School");
+  const [region, setRegion]     = useState("");
+  const [district, setDistrict] = useState("");
+  const [ward, setWard]         = useState("");
+  const [address, setAddress]   = useState("");
+  const [contact, setContact]   = useState("");
+  const [email, setEmail]       = useState("");
+  const [code, setCode]         = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState(genPassword());
+  const [loading, setLoading]   = useState(false);
+  const [issued, setIssued]     = useState<{ code: string; username: string; password: string } | null>(null);
+
+  // Derived cascades
+  const districts = region ? Object.keys(TZ_GEO[region] ?? {}) : [];
+  const wards     = (region && district) ? (TZ_GEO[region]?.[district] ?? []) : [];
+
+  function onRegionChange(r: string) {
+    setRegion(r);
+    setDistrict("");
+    setWard("");
+    if (!code) setCode(genCode(r));
+  }
+
+  function onDistrictChange(d: string) {
+    setDistrict(d);
+    setWard("");
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name || !region || !district || !ward || !code || !username || !password) {
+      toast.error("Fill all required fields."); return;
+    }
+    // username is the login email — must be a valid email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+      toast.error("Login email (Username) must be a valid email address."); return;
+    }
+    setLoading(true);
+
+    const { data, error } = await supabase.functions.invoke("create-school", {
+      body: {
+        school_code: code, school_name: name, type, region, district, ward,
+        address: address || null,
+        phone: contact || null,
+        email: username,        // login email
+        password,
+      },
+    });
+
+    if (error) {
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: { body?: unknown } }).context;
+        if (ctx?.body) { const pr = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body; if (pr?.error) msg = pr.error; }
+      } catch { /* keep */ }
+      toast.error(msg); setLoading(false); return;
+    }
+    if (data?.error) { toast.error(data.error); setLoading(false); return; }
+
+    setLoading(false);
+    setIssued({ code, username, password });
+    toast.success(`School ${code} registered!`);
+  }
+
+  if (issued) {
+    return (
+      <div className="space-y-4 py-2">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-5">
+          <div className="font-bold text-emerald-800 text-sm mb-3">✅ Credentials</div>
+          <div className="space-y-2 font-mono text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">School Code</span><strong className="text-primary">{issued.code}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Login Email</span><strong>{issued.username}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Password</span><strong>{issued.password}</strong></div>
+          </div>
+          <Button className="mt-4 w-full" onClick={() => {
+            navigator.clipboard.writeText(`School Code: ${issued.code}\nLogin Email: ${issued.username}\nPassword: ${issued.password}`);
+            toast.success("Credentials copied!");
+          }}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
+        </div>
+        <Button variant="outline" className="w-full" onClick={onDone}>Done</Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 py-2">
+      <div className="grid grid-cols-2 gap-3">
+
+        {/* Institution Type */}
+        <div className="col-span-2 space-y-1.5">
+          <Label>Institution Type *</Label>
+          <Select value={type} onValueChange={(v) => setType(v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SCHOOL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* School Name */}
+        <div className="col-span-2 space-y-1.5">
+          <Label>School Name *</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+
+        {/* Region */}
+        <div className="col-span-2 space-y-1.5">
+          <Label>Region *</Label>
+          <Select value={region} onValueChange={onRegionChange}>
+            <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+            <SelectContent>
+              {Object.keys(TZ_GEO).sort().map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* District — only enabled after region selected */}
+        <div className="space-y-1.5">
+          <Label>District *</Label>
+          <Select value={district} onValueChange={onDistrictChange} disabled={!region}>
+            <SelectTrigger>
+              <SelectValue placeholder={region ? "Select district" : "Select region first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Ward — only enabled after district selected */}
+        <div className="space-y-1.5">
+          <Label>Ward *</Label>
+          <Select value={ward} onValueChange={setWard} disabled={!district}>
+            <SelectTrigger>
+              <SelectValue placeholder={district ? "Select ward" : "Select district first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {wards.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Address & Contact */}
+        <div className="space-y-1.5"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+255 7XX XXX XXX" /></div>
+        <div className="col-span-2 space-y-1.5"><Label>Contact Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+      </div>
+
+      {/* Credentials */}
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
+        <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">🔑 Admin Credentials</div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <Label>School Code *</Label>
+            <Input className="font-mono font-bold" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MW1234" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Login Email *</Label>
+            <Input type="email" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="school@tsid.go.tz" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Password *</Label>
+            <Input className="font-mono" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => { if (region) setCode(genCode(region)); setPassword(genPassword()); }}>
+          ↻ Regenerate
+        </Button>
+      </div>
+
+      <Button type="submit" className="w-full bg-primary" disabled={loading}>
+        {loading ? "Registering…" : "🏫 Register School"}
+      </Button>
+    </form>
+  );
+}
+
+// ── School row actions: edit / notes / delete (National only) ──────────────
+function SchoolActions({ school, actorName, onChange }: {
+  school: { school_code: string; school_name: string; type: string; region: string; district: string; ward: string; notes?: string | null };
+  actorName: string; onChange: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  return (
+    <>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit School</DialogTitle></DialogHeader>
+          <EditSchoolForm school={school} actorName={actorName} onDone={() => { setEditOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={delOpen} onOpenChange={setDelOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Delete" className="text-red-600 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Delete School</DialogTitle></DialogHeader>
+          <DeleteSchoolConfirm school={school} actorName={actorName} onDone={() => { setDelOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function EditSchoolForm({ school, actorName, onDone }: {
+  school: { school_code: string; school_name: string; type: string; notes?: string | null };
+  actorName: string; onDone: () => void;
+}) {
+  const [name, setName] = useState(school.school_name);
+  const [notes, setNotes] = useState(school.notes ?? "");
+  const [loading, setLoading] = useState(false);
+  async function save() {
+    setLoading(true);
+    const { error } = await supabase.from("schools").update({
+      school_name: name, notes: notes || null,
+    }).eq("school_code", school.school_code);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "school:edit", message: `Edited school ${school.school_code} — ${name}`,
+      by_name: actorName, by_role: "gov", by_ref: school.school_code,
+    });
+    setLoading(false); toast.success("Saved"); onDone();
+  }
+  return (
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5"><Label>School Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Notes / Remarks</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note about this school" /></div>
+      <Button className="w-full bg-primary" onClick={save} disabled={loading}>{loading ? "Saving…" : "Save changes"}</Button>
+    </div>
+  );
+}
+
+function DeleteSchoolConfirm({ school, actorName, onDone }: {
+  school: { school_code: string; school_name: string }; actorName: string; onDone: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  async function del() {
+    setLoading(true);
+    const { error } = await supabase.from("schools").delete().eq("school_code", school.school_code);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "school:delete", message: `Deleted school ${school.school_code} — ${school.school_name}`,
+      by_name: actorName, by_role: "gov", by_ref: school.school_code,
+    });
+    setLoading(false); toast.success("School deleted"); onDone();
+  }
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm">Permanently delete <strong>{school.school_name}</strong> ({school.school_code})? This cannot be undone.</p>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onDone}>Cancel</Button>
+        <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>{loading ? "Deleting…" : "Delete"}</Button>
+      </div>
+    </div>
+  );
+}
+
+// ── School password reset — available to all gov admins (scope enforced server-side) ──
+function ResetSchoolPassword({ school }: {
+  school: { school_code: string; school_name: string; auth_uid?: string | null; email?: string | null };
+}) {
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState(genPassword());
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function reset() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "reset_school_password", school_code: school.school_code, new_password: pw },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    setDone(true);
+    toast.success("School password reset");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) { setPw(genPassword()); setDone(false); } }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" title="Reset school password"><KeyRound className="h-3.5 w-3.5" /></Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Reset School Password</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-muted-foreground">
+            New login password for <strong>{school.school_name}</strong>
+            {school.email && <> (<span className="font-mono">{school.email}</span>)</>}.
+          </p>
+          {!school.auth_uid && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+              This school has no login account (registered before login accounts were enabled). Re-register it to enable login.
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Input className="font-mono" value={pw} onChange={(e) => setPw(e.target.value)} disabled={!school.auth_uid} />
+            <Button variant="outline" size="sm" onClick={() => setPw(genPassword())} disabled={!school.auth_uid}>↻</Button>
+          </div>
+          {done ? (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm">
+              <div className="font-semibold text-emerald-800 mb-1">✅ Password reset</div>
+              <div className="font-mono flex items-center justify-between">
+                {pw}
+                <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(pw); toast.success("Copied"); }}><Copy className="h-3.5 w-3.5" /></Button>
+              </div>
+              <Button className="w-full mt-3" variant="outline" onClick={() => setOpen(false)}>Done</Button>
+            </div>
+          ) : (
+            <Button className="w-full bg-primary" onClick={reset} disabled={loading || !school.auth_uid}>
+              {loading ? "Resetting…" : "Reset password"}
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Bulk school upload (CSV/Excel) ─────────────────────────────────────────
+function BulkSchoolUpload({ actorName, me, onDone }: { actorName: string; me: any; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Upload className="h-4 w-4 mr-2" /> Bulk upload</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Bulk Upload Schools</DialogTitle></DialogHeader>
+        <BulkUpload
+          mode="schools"
+          onRows={async (rows) => {
+            let ok = 0, failed = 0; const errors: string[] = [];
+            for (const row of rows) {
+              if (!row.school_name?.trim() || !row.region?.trim() || !row.district?.trim()) {
+                failed++; errors.push(`${row.school_name || "row"}: missing name/region/district`); continue;
+              }
+              const prefix = (row.region || "TZ").slice(0, 2).toUpperCase();
+              const code = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+              const email = row.email?.trim() || `${code.toLowerCase()}@schools.tsid.go.tz`;
+              const password = "sc" + Math.random().toString(36).slice(2, 8).toUpperCase() + "!";
+              const { data, error } = await supabase.functions.invoke("create-school", {
+                body: {
+                  school_code: code, school_name: row.school_name, type: row.type || "Primary School",
+                  region: row.region, district: row.district, ward: row.ward || "",
+                  address: row.address || null, phone: row.phone || null,
+                  email, password,
+                },
+              });
+              if (error || data?.error) { failed++; errors.push(`${row.school_name}: ${data?.error ?? error?.message}`); }
+              else ok++;
+            }
+            onDone();
+            return { ok, failed, errors };
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+====================================================
+src\routes\_authenticated\gov.admins.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { useState } from "react";
+import { Plus, ShieldCheck, MapPin, Building2, Copy, Crown, MoreVertical, KeyRound, Trash2, Pencil, StickyNote } from "lucide-react";
+import { TZ_REGIONS, TZ_DISTRICTS } from "@/lib/tz-geo";
+
+export const Route = createFileRoute("/_authenticated/gov/admins")({ component: Page });
+
+type AdminRole = "gov_region" | "gov_district";
+type AdminRow = {
+  auth_uid: string; name: string; email: string; role: string;
+  region: string | null; district: string | null; status: string;
+  notes?: string | null; created_at?: string;
+};
+
+const ROLE_LABELS: Record<string, { label: string; icon: typeof Crown; color: string }> = {
+  gov:          { label: "National Admin",  icon: Crown,     color: "#1EB53A" },
+  admin:        { label: "National Admin",  icon: Crown,     color: "#1EB53A" },
+  gov_region:   { label: "Regional Admin",  icon: MapPin,    color: "#F5C400" },
+  gov_district: { label: "District Admin",  icon: Building2, color: "#007AFF" },
+};
+
+function genPassword() {
+  return "ad" + Math.random().toString(36).slice(2, 8).toUpperCase() + "!";
+}
+
+function Page() {
+  const qc = useQueryClient();
+  const me = useCurrentUser();
+  const [open, setOpen] = useState(false);
+
+  const canCreateRegional = me.tier === 0;
+  const canCreateDistrict = me.tier === 0 || me.tier === 1;
+  const isNational = me.tier === 0;
+
+  const { data: admins = [] } = useQuery({
+    queryKey: ["gov-admins"],
+    queryFn: async () =>
+      (await supabase
+        .from("admin_users")
+        .select("auth_uid,name,email,role,region,district,status,notes,created_at")
+        .in("role", ["gov", "admin", "gov_region", "gov_district"])
+        .order("role")
+      ).data as AdminRow[] ?? [],
+  });
+
+  if (!me.loading && me.tier === 2) {
+    return (
+      <div className="rounded-2xl border bg-card p-8 max-w-xl">
+        <div className="flex items-center gap-2 text-amber-600 font-semibold">
+          <ShieldCheck className="h-5 w-5" /> Access restricted
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          District admins cannot manage other admins. This page is for National and Regional admins only.
+        </p>
+      </div>
+    );
+  }
+
+  const national = admins.filter((a) => a.role === "gov" || a.role === "admin");
+  const regional = admins.filter((a) => a.role === "gov_region");
+  const district = admins.filter((a) => a.role === "gov_district");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Administrators</h1>
+          <p className="text-sm text-muted-foreground">
+            {isNational
+              ? "Create, edit, and oversee Regional and District administrators nationwide."
+              : `Create and oversee District administrators in ${me.region}.`}
+          </p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary"><Plus className="h-4 w-4 mr-2" /> Create admin</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Create Administrator</DialogTitle></DialogHeader>
+            <CreateAdminForm
+              me={me}
+              canCreateRegional={canCreateRegional}
+              canCreateDistrict={canCreateDistrict}
+              onDone={() => { setOpen(false); qc.invalidateQueries({ queryKey: ["gov-admins"] }); }}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "National", value: national.length, color: "#1EB53A" },
+          { label: "Regional", value: regional.length, color: "#F5C400" },
+          { label: "District", value: district.length, color: "#007AFF" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-2xl border bg-card p-5">
+            <div className="text-2xl font-bold" style={{ color: t.color }}>{t.value}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">{t.label} admins</div>
+          </div>
+        ))}
+      </div>
+
+      {[
+        { title: "National Administrators", rows: national },
+        { title: "Regional Administrators", rows: regional },
+        { title: "District Administrators", rows: district },
+      ].map((group) => (
+        <div key={group.title} className="rounded-2xl border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">{group.title} ({group.rows.length})</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Scope</th><th className="px-4 py-3">Status</th>
+                  {isNational && <th className="px-4 py-3 text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {group.rows.map((a) => {
+                  const meta = ROLE_LABELS[a.role] ?? ROLE_LABELS.gov_district;
+                  const isSelf = a.auth_uid === me.userId;
+                  return (
+                    <tr key={a.auth_uid} className="border-t hover:bg-muted/20 align-top">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <meta.icon className="h-3.5 w-3.5" style={{ color: meta.color }} />
+                          <span className="font-semibold">{a.name}</span>
+                          {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">YOU</span>}
+                        </div>
+                        {a.notes && <div className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1"><StickyNote className="h-3 w-3 mt-0.5 shrink-0" />{a.notes}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{a.email}</td>
+                      <td className="px-4 py-3 text-xs">
+                        {a.role === "gov" || a.role === "admin"
+                          ? "Nationwide"
+                          : a.district ? `${a.district}, ${a.region}` : a.region ?? "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs capitalize" style={{ color: a.status === "active" ? "#16a34a" : "#94a3b8" }}>
+                          {a.status}
+                        </span>
+                      </td>
+                      {isNational && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <AdminActions admin={a} isSelf={isSelf} me={me}
+                              onChange={() => qc.invalidateQueries({ queryKey: ["gov-admins"] })} />
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+                {group.rows.length === 0 && (
+                  <tr><td colSpan={isNational ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground text-sm">None yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Row actions: edit, reset password, delete ──────────────────────────────
+function AdminActions({ admin, isSelf, me, onChange }: {
+  admin: AdminRow; isSelf: boolean; me: ReturnType<typeof useCurrentUser>; onChange: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+
+  // Don't allow National admins to be edited/deleted (only regional/district)
+  const isNationalTarget = admin.role === "gov" || admin.role === "admin";
+
+  return (
+    <>
+      {/* Edit */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit Administrator</DialogTitle></DialogHeader>
+          <EditAdminForm admin={admin} me={me} onDone={() => { setEditOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password */}
+      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Reset password"><KeyRound className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Reset Password</DialogTitle></DialogHeader>
+          <ResetPasswordForm admin={admin} onDone={() => setPwOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete — not self, not national */}
+      {!isSelf && !isNationalTarget && (
+        <Dialog open={delOpen} onOpenChange={setDelOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost" title="Delete" className="text-red-600 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Delete Administrator</DialogTitle></DialogHeader>
+            <DeleteAdminConfirm admin={admin} onDone={() => { setDelOpen(false); onChange(); }} />
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function EditAdminForm({ admin, me, onDone }: { admin: AdminRow; me: ReturnType<typeof useCurrentUser>; onDone: () => void }) {
+  const [name, setName] = useState(admin.name);
+  const [status, setStatus] = useState(admin.status);
+  const [notes, setNotes] = useState(admin.notes ?? "");
+  const [region, setRegion] = useState(admin.region ?? "");
+  const [district, setDistrict] = useState(admin.district ?? "");
+  const [loading, setLoading] = useState(false);
+  const isDistrict = admin.role === "gov_district";
+  const districts = region ? (TZ_DISTRICTS[region] ?? []) : [];
+
+  async function save() {
+    setLoading(true);
+    const { error } = await supabase.from("admin_users").update({
+      name, status, notes: notes || null,
+      region: region || null,
+      district: isDistrict ? (district || null) : null,
+    }).eq("auth_uid", admin.auth_uid);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "admin:edit", message: `Edited admin ${name} (${admin.email})`,
+      by_name: me.fullName ?? "National Admin", by_role: me.role ?? "gov", by_ref: me.userId,
+    });
+    setLoading(false);
+    toast.success("Saved");
+    onDone();
+  }
+
+  return (
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5"><Label>Full Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="space-y-1.5">
+        <Label>Region</Label>
+        <Select value={region} onValueChange={(v) => { setRegion(v); setDistrict(""); }}>
+          <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+          <SelectContent>{TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      {isDistrict && (
+        <div className="space-y-1.5">
+          <Label>District</Label>
+          <Select value={district} onValueChange={setDistrict} disabled={!region}>
+            <SelectTrigger><SelectValue placeholder="Select district" /></SelectTrigger>
+            <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Status</Label>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5"><Label>Notes / Remarks</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note about this admin" /></div>
+      <Button className="w-full bg-primary" onClick={save} disabled={loading}>{loading ? "Saving…" : "Save changes"}</Button>
+    </div>
+  );
+}
+
+function ResetPasswordForm({ admin, onDone }: { admin: AdminRow; onDone: () => void }) {
+  const [pw, setPw] = useState(genPassword());
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function reset() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "reset_password", target_uid: admin.auth_uid, new_password: pw },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    setDone(true);
+    toast.success("Password reset");
+  }
+
+  return (
+    <div className="space-y-3 py-2">
+      <p className="text-sm text-muted-foreground">Set a new password for <strong>{admin.name}</strong> ({admin.email}).</p>
+      <div className="flex gap-2">
+        <Input className="font-mono" value={pw} onChange={(e) => setPw(e.target.value)} />
+        <Button variant="outline" size="sm" onClick={() => setPw(genPassword())}>↻</Button>
+      </div>
+      {done ? (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm">
+          <div className="font-semibold text-emerald-800 mb-1">✅ New password set</div>
+          <div className="font-mono flex items-center justify-between">
+            {pw}
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(pw); toast.success("Copied"); }}><Copy className="h-3.5 w-3.5" /></Button>
+          </div>
+          <Button className="w-full mt-3" variant="outline" onClick={onDone}>Done</Button>
+        </div>
+      ) : (
+        <Button className="w-full bg-primary" onClick={reset} disabled={loading}>{loading ? "Resetting…" : "Reset password"}</Button>
+      )}
+    </div>
+  );
+}
+
+function DeleteAdminConfirm({ admin, onDone }: { admin: AdminRow; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function del() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "delete_admin", target_uid: admin.auth_uid },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    toast.success("Admin deleted");
+    onDone();
+  }
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm">Permanently delete <strong>{admin.name}</strong> ({admin.email})? This removes their login and admin access. This cannot be undone.</p>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onDone}>Cancel</Button>
+        <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>
+          {loading ? "Deleting…" : "Delete"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Create form (unchanged logic, calls edge fn) ───────────────────────────
+function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
+  me: ReturnType<typeof useCurrentUser>;
+  canCreateRegional: boolean; canCreateDistrict: boolean; onDone: () => void;
+}) {
+  const [adminRole, setAdminRole] = useState<AdminRole>(canCreateRegional ? "gov_region" : "gov_district");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [region, setRegion] = useState(me.tier === 1 ? (me.region ?? "") : "");
+  const [district, setDistrict] = useState("");
+  const [password, setPassword] = useState(genPassword());
+  const [loading, setLoading] = useState(false);
+  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
+
+  const districts = region ? (TZ_DISTRICTS[region] ?? []) : [];
+  const needsDistrict = adminRole === "gov_district";
+  const regionLocked = me.tier === 1;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name || !email || !region) { toast.error("Fill name, email and region."); return; }
+    if (needsDistrict && !district) { toast.error("Select a district."); return; }
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("create-admin", {
+      body: { name, email, password, role: adminRole, region, district: needsDistrict ? district : null },
+    });
+    if (error) {
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: { body?: unknown } }).context;
+        if (ctx?.body) { const p = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body; if (p?.error) msg = p.error; }
+      } catch { /* keep */ }
+      toast.error(msg); setLoading(false); return;
+    }
+    if (data?.error) { toast.error(data.error); setLoading(false); return; }
+    setLoading(false);
+    setIssued({ email, password });
+    toast.success("Administrator created!");
+  }
+
+  if (issued) {
+    return (
+      <div className="space-y-4 py-2">
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-5">
+          <div className="font-bold text-emerald-800 text-sm mb-3">✅ Admin credentials</div>
+          <div className="space-y-2 font-mono text-sm">
+            <div className="flex justify-between"><span className="text-muted-foreground">Email</span><strong>{issued.email}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Password</span><strong>{issued.password}</strong></div>
+          </div>
+          <Button className="mt-4 w-full" onClick={() => {
+            navigator.clipboard.writeText(`Email: ${issued.email}\nPassword: ${issued.password}`);
+            toast.success("Copied!");
+          }}><Copy className="h-4 w-4 mr-2" /> Copy credentials</Button>
+        </div>
+        <Button variant="outline" className="w-full" onClick={onDone}>Done</Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 py-2">
+      {canCreateRegional && (
+        <div className="space-y-1.5">
+          <Label>Admin Level *</Label>
+          <Select value={adminRole} onValueChange={(v) => { setAdminRole(v as AdminRole); setDistrict(""); }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gov_region">Regional Admin — oversees 1 region</SelectItem>
+              <SelectItem value="gov_district">District Admin — manages 1 district</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {!canCreateRegional && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800">
+          You're creating a <strong>District Admin</strong> in <strong>{me.region}</strong>.
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 space-y-1.5"><Label>Full Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+        <div className="col-span-2 space-y-1.5"><Label>Email *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@tsid.go.tz" required /></div>
+        <div className="space-y-1.5">
+          <Label>Region *</Label>
+          <Select value={region} onValueChange={(v) => { setRegion(v); setDistrict(""); }} disabled={regionLocked}>
+            <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+            <SelectContent>{TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        {needsDistrict && (
+          <div className="space-y-1.5">
+            <Label>District *</Label>
+            <Select value={district} onValueChange={setDistrict} disabled={!region}>
+              <SelectTrigger><SelectValue placeholder={region ? "Select district" : "Region first"} /></SelectTrigger>
+              <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2">
+        <Label>Temporary Password *</Label>
+        <div className="flex gap-2">
+          <Input className="font-mono" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Button type="button" variant="outline" size="sm" onClick={() => setPassword(genPassword())}>↻</Button>
+        </div>
+      </div>
+      <Button type="submit" className="w-full bg-primary" disabled={loading}>{loading ? "Creating…" : "👤 Create Administrator"}</Button>
+    </form>
+  );
+}
+
+====================================================
+src\routes\_authenticated\gov.logs.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useTheme } from "@/lib/theme";
+
+export const Route = createFileRoute("/_authenticated/gov/logs")({ component: Page });
+
+const ACTION_COLORS: Record<string,string> = {
+  "auth:login":"text-blue-600 bg-blue-50","auth:logout":"text-slate-600 bg-slate-100",
+  "student:create":"text-emerald-700 bg-emerald-50","school:create":"text-violet-700 bg-violet-50",
+  "application:approve":"text-emerald-700 bg-emerald-50","application:reject":"text-red-700 bg-red-50",
+};
+
+function Page() {
+  const { t } = useTheme();
+  const { data: logs=[] } = useQuery({ queryKey:["gov-logs"], queryFn: async()=>(await supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(300)).data??[] });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-primary" style={{fontFamily:"var(--font-display)"}}>{t("logs_title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("logs_sub")} · {logs.length} {t("entries")}</p>
+      </div>
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">{t("col_action")}</th><th className="px-4 py-3">{t("col_message")}</th>
+                <th className="px-4 py-3">{t("col_by")}</th><th className="px-4 py-3">{t("col_role")}</th><th className="px-4 py-3">{t("col_time")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l)=>(
+                <tr key={l.id} className="border-t hover:bg-muted/20">
+                  <td className="px-4 py-2.5"><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${ACTION_COLORS[l.action]??"text-slate-600 bg-slate-100"}`}>{l.action}</span></td>
+                  <td className="px-4 py-2.5 text-sm max-w-xs truncate">{l.message??"—"}</td>
+                  <td className="px-4 py-2.5 text-sm">{l.by_name??"—"}</td>
+                  <td className="px-4 py-2.5 text-xs capitalize text-muted-foreground">{l.by_role??"—"}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(l.created_at).toLocaleString("en-TZ",{dateStyle:"medium",timeStyle:"short"})}</td>
+                </tr>
+              ))}
+              {logs.length===0 && <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">{t("no_logs")}</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+====================================================
+src\routes\_authenticated\gov.approvals.tsx
+====================================================
+import { createFileRoute } from "@tanstack/react-router";
+import { ApprovalsInbox } from "@/components/tsid/approvals-inbox";
+
+export const Route = createFileRoute("/_authenticated/gov/approvals")({ component: Page });
+
+function Page() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Approvals</h1>
+        <p className="text-sm text-muted-foreground">Review major student changes (name, DOB, TSID, transfers) and school profile changes.</p>
+      </div>
+      <ApprovalsInbox level="admin" />
+    </div>
+  );
+}

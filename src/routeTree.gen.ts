@@ -16,14 +16,30 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStudentRouteImport } from './routes/_authenticated/student'
 import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated/school'
+import { Route as AuthenticatedRegionalRouteImport } from './routes/_authenticated/regional'
 import { Route as AuthenticatedGovRouteImport } from './routes/_authenticated/gov'
+import { Route as AuthenticatedDistrictRouteImport } from './routes/_authenticated/district'
+import { Route as ApiStudentsIndexRouteImport } from './routes/api/students/index'
+import { Route as ApiSchoolsIndexRouteImport } from './routes/api/schools/index'
+import { Route as ApiReportsIndexRouteImport } from './routes/api/reports/index'
+import { Route as ApiApprovalsIndexRouteImport } from './routes/api/approvals/index'
+import { Route as ApiAnalyticsIndexRouteImport } from './routes/api/analytics/index'
+import { Route as ApiAdminsIndexRouteImport } from './routes/api/admins/index'
 import { Route as AuthenticatedStudentIndexRouteImport } from './routes/_authenticated/student.index'
 import { Route as AuthenticatedSchoolIndexRouteImport } from './routes/_authenticated/school.index'
+import { Route as AuthenticatedRegionalIndexRouteImport } from './routes/_authenticated/regional.index'
 import { Route as AuthenticatedGovIndexRouteImport } from './routes/_authenticated/gov.index'
+import { Route as AuthenticatedDistrictIndexRouteImport } from './routes/_authenticated/district.index'
+import { Route as ApiApprovalsBulkRouteImport } from './routes/api/approvals/bulk'
+import { Route as AuthenticatedStudentResultsRouteImport } from './routes/_authenticated/student.results'
 import { Route as AuthenticatedStudentIdRouteImport } from './routes/_authenticated/student.id'
 import { Route as AuthenticatedStudentApplicationsRouteImport } from './routes/_authenticated/student.applications'
+import { Route as AuthenticatedSchoolTeachersRouteImport } from './routes/_authenticated/school.teachers'
 import { Route as AuthenticatedSchoolStudentsRouteImport } from './routes/_authenticated/school.students'
 import { Route as AuthenticatedSchoolSettingsRouteImport } from './routes/_authenticated/school.settings'
+import { Route as AuthenticatedSchoolReportsRouteImport } from './routes/_authenticated/school.reports'
+import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authenticated/school.fees'
+import { Route as AuthenticatedSchoolClassesRouteImport } from './routes/_authenticated/school.classes'
 import { Route as AuthenticatedSchoolApprovalsRouteImport } from './routes/_authenticated/school.approvals'
 import { Route as AuthenticatedSchoolApplicationsRouteImport } from './routes/_authenticated/school.applications'
 import { Route as AuthenticatedGovStudentsRouteImport } from './routes/_authenticated/gov.students'
@@ -66,10 +82,50 @@ const AuthenticatedSchoolRoute = AuthenticatedSchoolRouteImport.update({
   path: '/school',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRegionalRoute = AuthenticatedRegionalRouteImport.update({
+  id: '/regional',
+  path: '/regional',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedGovRoute = AuthenticatedGovRouteImport.update({
   id: '/gov',
   path: '/gov',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDistrictRoute = AuthenticatedDistrictRouteImport.update({
+  id: '/district',
+  path: '/district',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiStudentsIndexRoute = ApiStudentsIndexRouteImport.update({
+  id: '/api/students/',
+  path: '/api/students/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSchoolsIndexRoute = ApiSchoolsIndexRouteImport.update({
+  id: '/api/schools/',
+  path: '/api/schools/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiReportsIndexRoute = ApiReportsIndexRouteImport.update({
+  id: '/api/reports/',
+  path: '/api/reports/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiApprovalsIndexRoute = ApiApprovalsIndexRouteImport.update({
+  id: '/api/approvals/',
+  path: '/api/approvals/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnalyticsIndexRoute = ApiAnalyticsIndexRouteImport.update({
+  id: '/api/analytics/',
+  path: '/api/analytics/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminsIndexRoute = ApiAdminsIndexRouteImport.update({
+  id: '/api/admins/',
+  path: '/api/admins/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedStudentIndexRoute =
   AuthenticatedStudentIndexRouteImport.update({
@@ -83,11 +139,34 @@ const AuthenticatedSchoolIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSchoolRoute,
   } as any)
+const AuthenticatedRegionalIndexRoute =
+  AuthenticatedRegionalIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedRegionalRoute,
+  } as any)
 const AuthenticatedGovIndexRoute = AuthenticatedGovIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedGovRoute,
 } as any)
+const AuthenticatedDistrictIndexRoute =
+  AuthenticatedDistrictIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedDistrictRoute,
+  } as any)
+const ApiApprovalsBulkRoute = ApiApprovalsBulkRouteImport.update({
+  id: '/api/approvals/bulk',
+  path: '/api/approvals/bulk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedStudentResultsRoute =
+  AuthenticatedStudentResultsRouteImport.update({
+    id: '/results',
+    path: '/results',
+    getParentRoute: () => AuthenticatedStudentRoute,
+  } as any)
 const AuthenticatedStudentIdRoute = AuthenticatedStudentIdRouteImport.update({
   id: '/id',
   path: '/id',
@@ -99,6 +178,12 @@ const AuthenticatedStudentApplicationsRoute =
     path: '/applications',
     getParentRoute: () => AuthenticatedStudentRoute,
   } as any)
+const AuthenticatedSchoolTeachersRoute =
+  AuthenticatedSchoolTeachersRouteImport.update({
+    id: '/teachers',
+    path: '/teachers',
+    getParentRoute: () => AuthenticatedSchoolRoute,
+  } as any)
 const AuthenticatedSchoolStudentsRoute =
   AuthenticatedSchoolStudentsRouteImport.update({
     id: '/students',
@@ -109,6 +194,23 @@ const AuthenticatedSchoolSettingsRoute =
   AuthenticatedSchoolSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
+    getParentRoute: () => AuthenticatedSchoolRoute,
+  } as any)
+const AuthenticatedSchoolReportsRoute =
+  AuthenticatedSchoolReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedSchoolRoute,
+  } as any)
+const AuthenticatedSchoolFeesRoute = AuthenticatedSchoolFeesRouteImport.update({
+  id: '/fees',
+  path: '/fees',
+  getParentRoute: () => AuthenticatedSchoolRoute,
+} as any)
+const AuthenticatedSchoolClassesRoute =
+  AuthenticatedSchoolClassesRouteImport.update({
+    id: '/classes',
+    path: '/classes',
     getParentRoute: () => AuthenticatedSchoolRoute,
   } as any)
 const AuthenticatedSchoolApprovalsRoute =
@@ -156,7 +258,9 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/district': typeof AuthenticatedDistrictRouteWithChildren
   '/gov': typeof AuthenticatedGovRouteWithChildren
+  '/regional': typeof AuthenticatedRegionalRouteWithChildren
   '/school': typeof AuthenticatedSchoolRouteWithChildren
   '/student': typeof AuthenticatedStudentRouteWithChildren
   '/gov/admins': typeof AuthenticatedGovAdminsRoute
@@ -166,13 +270,27 @@ export interface FileRoutesByFullPath {
   '/gov/students': typeof AuthenticatedGovStudentsRoute
   '/school/applications': typeof AuthenticatedSchoolApplicationsRoute
   '/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
+  '/school/classes': typeof AuthenticatedSchoolClassesRoute
+  '/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/school/reports': typeof AuthenticatedSchoolReportsRoute
   '/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/school/teachers': typeof AuthenticatedSchoolTeachersRoute
   '/student/applications': typeof AuthenticatedStudentApplicationsRoute
   '/student/id': typeof AuthenticatedStudentIdRoute
+  '/student/results': typeof AuthenticatedStudentResultsRoute
+  '/api/approvals/bulk': typeof ApiApprovalsBulkRoute
+  '/district/': typeof AuthenticatedDistrictIndexRoute
   '/gov/': typeof AuthenticatedGovIndexRoute
+  '/regional/': typeof AuthenticatedRegionalIndexRoute
   '/school/': typeof AuthenticatedSchoolIndexRoute
   '/student/': typeof AuthenticatedStudentIndexRoute
+  '/api/admins/': typeof ApiAdminsIndexRoute
+  '/api/analytics/': typeof ApiAnalyticsIndexRoute
+  '/api/approvals/': typeof ApiApprovalsIndexRoute
+  '/api/reports/': typeof ApiReportsIndexRoute
+  '/api/schools/': typeof ApiSchoolsIndexRoute
+  '/api/students/': typeof ApiStudentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -186,13 +304,27 @@ export interface FileRoutesByTo {
   '/gov/students': typeof AuthenticatedGovStudentsRoute
   '/school/applications': typeof AuthenticatedSchoolApplicationsRoute
   '/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
+  '/school/classes': typeof AuthenticatedSchoolClassesRoute
+  '/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/school/reports': typeof AuthenticatedSchoolReportsRoute
   '/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/school/teachers': typeof AuthenticatedSchoolTeachersRoute
   '/student/applications': typeof AuthenticatedStudentApplicationsRoute
   '/student/id': typeof AuthenticatedStudentIdRoute
+  '/student/results': typeof AuthenticatedStudentResultsRoute
+  '/api/approvals/bulk': typeof ApiApprovalsBulkRoute
+  '/district': typeof AuthenticatedDistrictIndexRoute
   '/gov': typeof AuthenticatedGovIndexRoute
+  '/regional': typeof AuthenticatedRegionalIndexRoute
   '/school': typeof AuthenticatedSchoolIndexRoute
   '/student': typeof AuthenticatedStudentIndexRoute
+  '/api/admins': typeof ApiAdminsIndexRoute
+  '/api/analytics': typeof ApiAnalyticsIndexRoute
+  '/api/approvals': typeof ApiApprovalsIndexRoute
+  '/api/reports': typeof ApiReportsIndexRoute
+  '/api/schools': typeof ApiSchoolsIndexRoute
+  '/api/students': typeof ApiStudentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -201,7 +333,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/district': typeof AuthenticatedDistrictRouteWithChildren
   '/_authenticated/gov': typeof AuthenticatedGovRouteWithChildren
+  '/_authenticated/regional': typeof AuthenticatedRegionalRouteWithChildren
   '/_authenticated/school': typeof AuthenticatedSchoolRouteWithChildren
   '/_authenticated/student': typeof AuthenticatedStudentRouteWithChildren
   '/_authenticated/gov/admins': typeof AuthenticatedGovAdminsRoute
@@ -211,13 +345,27 @@ export interface FileRoutesById {
   '/_authenticated/gov/students': typeof AuthenticatedGovStudentsRoute
   '/_authenticated/school/applications': typeof AuthenticatedSchoolApplicationsRoute
   '/_authenticated/school/approvals': typeof AuthenticatedSchoolApprovalsRoute
+  '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRoute
+  '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/_authenticated/school/reports': typeof AuthenticatedSchoolReportsRoute
   '/_authenticated/school/settings': typeof AuthenticatedSchoolSettingsRoute
   '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/_authenticated/school/teachers': typeof AuthenticatedSchoolTeachersRoute
   '/_authenticated/student/applications': typeof AuthenticatedStudentApplicationsRoute
   '/_authenticated/student/id': typeof AuthenticatedStudentIdRoute
+  '/_authenticated/student/results': typeof AuthenticatedStudentResultsRoute
+  '/api/approvals/bulk': typeof ApiApprovalsBulkRoute
+  '/_authenticated/district/': typeof AuthenticatedDistrictIndexRoute
   '/_authenticated/gov/': typeof AuthenticatedGovIndexRoute
+  '/_authenticated/regional/': typeof AuthenticatedRegionalIndexRoute
   '/_authenticated/school/': typeof AuthenticatedSchoolIndexRoute
   '/_authenticated/student/': typeof AuthenticatedStudentIndexRoute
+  '/api/admins/': typeof ApiAdminsIndexRoute
+  '/api/analytics/': typeof ApiAnalyticsIndexRoute
+  '/api/approvals/': typeof ApiApprovalsIndexRoute
+  '/api/reports/': typeof ApiReportsIndexRoute
+  '/api/schools/': typeof ApiSchoolsIndexRoute
+  '/api/students/': typeof ApiStudentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,7 +374,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/search'
     | '/sitemap.xml'
+    | '/district'
     | '/gov'
+    | '/regional'
     | '/school'
     | '/student'
     | '/gov/admins'
@@ -236,13 +386,27 @@ export interface FileRouteTypes {
     | '/gov/students'
     | '/school/applications'
     | '/school/approvals'
+    | '/school/classes'
+    | '/school/fees'
+    | '/school/reports'
     | '/school/settings'
     | '/school/students'
+    | '/school/teachers'
     | '/student/applications'
     | '/student/id'
+    | '/student/results'
+    | '/api/approvals/bulk'
+    | '/district/'
     | '/gov/'
+    | '/regional/'
     | '/school/'
     | '/student/'
+    | '/api/admins/'
+    | '/api/analytics/'
+    | '/api/approvals/'
+    | '/api/reports/'
+    | '/api/schools/'
+    | '/api/students/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -256,13 +420,27 @@ export interface FileRouteTypes {
     | '/gov/students'
     | '/school/applications'
     | '/school/approvals'
+    | '/school/classes'
+    | '/school/fees'
+    | '/school/reports'
     | '/school/settings'
     | '/school/students'
+    | '/school/teachers'
     | '/student/applications'
     | '/student/id'
+    | '/student/results'
+    | '/api/approvals/bulk'
+    | '/district'
     | '/gov'
+    | '/regional'
     | '/school'
     | '/student'
+    | '/api/admins'
+    | '/api/analytics'
+    | '/api/approvals'
+    | '/api/reports'
+    | '/api/schools'
+    | '/api/students'
   id:
     | '__root__'
     | '/'
@@ -270,7 +448,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/search'
     | '/sitemap.xml'
+    | '/_authenticated/district'
     | '/_authenticated/gov'
+    | '/_authenticated/regional'
     | '/_authenticated/school'
     | '/_authenticated/student'
     | '/_authenticated/gov/admins'
@@ -280,13 +460,27 @@ export interface FileRouteTypes {
     | '/_authenticated/gov/students'
     | '/_authenticated/school/applications'
     | '/_authenticated/school/approvals'
+    | '/_authenticated/school/classes'
+    | '/_authenticated/school/fees'
+    | '/_authenticated/school/reports'
     | '/_authenticated/school/settings'
     | '/_authenticated/school/students'
+    | '/_authenticated/school/teachers'
     | '/_authenticated/student/applications'
     | '/_authenticated/student/id'
+    | '/_authenticated/student/results'
+    | '/api/approvals/bulk'
+    | '/_authenticated/district/'
     | '/_authenticated/gov/'
+    | '/_authenticated/regional/'
     | '/_authenticated/school/'
     | '/_authenticated/student/'
+    | '/api/admins/'
+    | '/api/analytics/'
+    | '/api/approvals/'
+    | '/api/reports/'
+    | '/api/schools/'
+    | '/api/students/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -295,6 +489,13 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiApprovalsBulkRoute: typeof ApiApprovalsBulkRoute
+  ApiAdminsIndexRoute: typeof ApiAdminsIndexRoute
+  ApiAnalyticsIndexRoute: typeof ApiAnalyticsIndexRoute
+  ApiApprovalsIndexRoute: typeof ApiApprovalsIndexRoute
+  ApiReportsIndexRoute: typeof ApiReportsIndexRoute
+  ApiSchoolsIndexRoute: typeof ApiSchoolsIndexRoute
+  ApiStudentsIndexRoute: typeof ApiStudentsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -348,12 +549,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/regional': {
+      id: '/_authenticated/regional'
+      path: '/regional'
+      fullPath: '/regional'
+      preLoaderRoute: typeof AuthenticatedRegionalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/gov': {
       id: '/_authenticated/gov'
       path: '/gov'
       fullPath: '/gov'
       preLoaderRoute: typeof AuthenticatedGovRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/district': {
+      id: '/_authenticated/district'
+      path: '/district'
+      fullPath: '/district'
+      preLoaderRoute: typeof AuthenticatedDistrictRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/students/': {
+      id: '/api/students/'
+      path: '/api/students'
+      fullPath: '/api/students/'
+      preLoaderRoute: typeof ApiStudentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/schools/': {
+      id: '/api/schools/'
+      path: '/api/schools'
+      fullPath: '/api/schools/'
+      preLoaderRoute: typeof ApiSchoolsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/reports/': {
+      id: '/api/reports/'
+      path: '/api/reports'
+      fullPath: '/api/reports/'
+      preLoaderRoute: typeof ApiReportsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/approvals/': {
+      id: '/api/approvals/'
+      path: '/api/approvals'
+      fullPath: '/api/approvals/'
+      preLoaderRoute: typeof ApiApprovalsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/analytics/': {
+      id: '/api/analytics/'
+      path: '/api/analytics'
+      fullPath: '/api/analytics/'
+      preLoaderRoute: typeof ApiAnalyticsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admins/': {
+      id: '/api/admins/'
+      path: '/api/admins'
+      fullPath: '/api/admins/'
+      preLoaderRoute: typeof ApiAdminsIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/student/': {
       id: '/_authenticated/student/'
@@ -369,12 +626,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolIndexRouteImport
       parentRoute: typeof AuthenticatedSchoolRoute
     }
+    '/_authenticated/regional/': {
+      id: '/_authenticated/regional/'
+      path: '/'
+      fullPath: '/regional/'
+      preLoaderRoute: typeof AuthenticatedRegionalIndexRouteImport
+      parentRoute: typeof AuthenticatedRegionalRoute
+    }
     '/_authenticated/gov/': {
       id: '/_authenticated/gov/'
       path: '/'
       fullPath: '/gov/'
       preLoaderRoute: typeof AuthenticatedGovIndexRouteImport
       parentRoute: typeof AuthenticatedGovRoute
+    }
+    '/_authenticated/district/': {
+      id: '/_authenticated/district/'
+      path: '/'
+      fullPath: '/district/'
+      preLoaderRoute: typeof AuthenticatedDistrictIndexRouteImport
+      parentRoute: typeof AuthenticatedDistrictRoute
+    }
+    '/api/approvals/bulk': {
+      id: '/api/approvals/bulk'
+      path: '/api/approvals/bulk'
+      fullPath: '/api/approvals/bulk'
+      preLoaderRoute: typeof ApiApprovalsBulkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/student/results': {
+      id: '/_authenticated/student/results'
+      path: '/results'
+      fullPath: '/student/results'
+      preLoaderRoute: typeof AuthenticatedStudentResultsRouteImport
+      parentRoute: typeof AuthenticatedStudentRoute
     }
     '/_authenticated/student/id': {
       id: '/_authenticated/student/id'
@@ -390,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentApplicationsRouteImport
       parentRoute: typeof AuthenticatedStudentRoute
     }
+    '/_authenticated/school/teachers': {
+      id: '/_authenticated/school/teachers'
+      path: '/teachers'
+      fullPath: '/school/teachers'
+      preLoaderRoute: typeof AuthenticatedSchoolTeachersRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
     '/_authenticated/school/students': {
       id: '/_authenticated/school/students'
       path: '/students'
@@ -402,6 +694,27 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/school/settings'
       preLoaderRoute: typeof AuthenticatedSchoolSettingsRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
+    '/_authenticated/school/reports': {
+      id: '/_authenticated/school/reports'
+      path: '/reports'
+      fullPath: '/school/reports'
+      preLoaderRoute: typeof AuthenticatedSchoolReportsRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
+    '/_authenticated/school/fees': {
+      id: '/_authenticated/school/fees'
+      path: '/fees'
+      fullPath: '/school/fees'
+      preLoaderRoute: typeof AuthenticatedSchoolFeesRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
+    '/_authenticated/school/classes': {
+      id: '/_authenticated/school/classes'
+      path: '/classes'
+      fullPath: '/school/classes'
+      preLoaderRoute: typeof AuthenticatedSchoolClassesRouteImport
       parentRoute: typeof AuthenticatedSchoolRoute
     }
     '/_authenticated/school/approvals': {
@@ -456,6 +769,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedDistrictRouteChildren {
+  AuthenticatedDistrictIndexRoute: typeof AuthenticatedDistrictIndexRoute
+}
+
+const AuthenticatedDistrictRouteChildren: AuthenticatedDistrictRouteChildren = {
+  AuthenticatedDistrictIndexRoute: AuthenticatedDistrictIndexRoute,
+}
+
+const AuthenticatedDistrictRouteWithChildren =
+  AuthenticatedDistrictRoute._addFileChildren(
+    AuthenticatedDistrictRouteChildren,
+  )
+
 interface AuthenticatedGovRouteChildren {
   AuthenticatedGovAdminsRoute: typeof AuthenticatedGovAdminsRoute
   AuthenticatedGovApprovalsRoute: typeof AuthenticatedGovApprovalsRoute
@@ -477,19 +803,40 @@ const AuthenticatedGovRouteChildren: AuthenticatedGovRouteChildren = {
 const AuthenticatedGovRouteWithChildren =
   AuthenticatedGovRoute._addFileChildren(AuthenticatedGovRouteChildren)
 
+interface AuthenticatedRegionalRouteChildren {
+  AuthenticatedRegionalIndexRoute: typeof AuthenticatedRegionalIndexRoute
+}
+
+const AuthenticatedRegionalRouteChildren: AuthenticatedRegionalRouteChildren = {
+  AuthenticatedRegionalIndexRoute: AuthenticatedRegionalIndexRoute,
+}
+
+const AuthenticatedRegionalRouteWithChildren =
+  AuthenticatedRegionalRoute._addFileChildren(
+    AuthenticatedRegionalRouteChildren,
+  )
+
 interface AuthenticatedSchoolRouteChildren {
   AuthenticatedSchoolApplicationsRoute: typeof AuthenticatedSchoolApplicationsRoute
   AuthenticatedSchoolApprovalsRoute: typeof AuthenticatedSchoolApprovalsRoute
+  AuthenticatedSchoolClassesRoute: typeof AuthenticatedSchoolClassesRoute
+  AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
+  AuthenticatedSchoolReportsRoute: typeof AuthenticatedSchoolReportsRoute
   AuthenticatedSchoolSettingsRoute: typeof AuthenticatedSchoolSettingsRoute
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
+  AuthenticatedSchoolTeachersRoute: typeof AuthenticatedSchoolTeachersRoute
   AuthenticatedSchoolIndexRoute: typeof AuthenticatedSchoolIndexRoute
 }
 
 const AuthenticatedSchoolRouteChildren: AuthenticatedSchoolRouteChildren = {
   AuthenticatedSchoolApplicationsRoute: AuthenticatedSchoolApplicationsRoute,
   AuthenticatedSchoolApprovalsRoute: AuthenticatedSchoolApprovalsRoute,
+  AuthenticatedSchoolClassesRoute: AuthenticatedSchoolClassesRoute,
+  AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
+  AuthenticatedSchoolReportsRoute: AuthenticatedSchoolReportsRoute,
   AuthenticatedSchoolSettingsRoute: AuthenticatedSchoolSettingsRoute,
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
+  AuthenticatedSchoolTeachersRoute: AuthenticatedSchoolTeachersRoute,
   AuthenticatedSchoolIndexRoute: AuthenticatedSchoolIndexRoute,
 }
 
@@ -499,12 +846,14 @@ const AuthenticatedSchoolRouteWithChildren =
 interface AuthenticatedStudentRouteChildren {
   AuthenticatedStudentApplicationsRoute: typeof AuthenticatedStudentApplicationsRoute
   AuthenticatedStudentIdRoute: typeof AuthenticatedStudentIdRoute
+  AuthenticatedStudentResultsRoute: typeof AuthenticatedStudentResultsRoute
   AuthenticatedStudentIndexRoute: typeof AuthenticatedStudentIndexRoute
 }
 
 const AuthenticatedStudentRouteChildren: AuthenticatedStudentRouteChildren = {
   AuthenticatedStudentApplicationsRoute: AuthenticatedStudentApplicationsRoute,
   AuthenticatedStudentIdRoute: AuthenticatedStudentIdRoute,
+  AuthenticatedStudentResultsRoute: AuthenticatedStudentResultsRoute,
   AuthenticatedStudentIndexRoute: AuthenticatedStudentIndexRoute,
 }
 
@@ -512,13 +861,17 @@ const AuthenticatedStudentRouteWithChildren =
   AuthenticatedStudentRoute._addFileChildren(AuthenticatedStudentRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDistrictRoute: typeof AuthenticatedDistrictRouteWithChildren
   AuthenticatedGovRoute: typeof AuthenticatedGovRouteWithChildren
+  AuthenticatedRegionalRoute: typeof AuthenticatedRegionalRouteWithChildren
   AuthenticatedSchoolRoute: typeof AuthenticatedSchoolRouteWithChildren
   AuthenticatedStudentRoute: typeof AuthenticatedStudentRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDistrictRoute: AuthenticatedDistrictRouteWithChildren,
   AuthenticatedGovRoute: AuthenticatedGovRouteWithChildren,
+  AuthenticatedRegionalRoute: AuthenticatedRegionalRouteWithChildren,
   AuthenticatedSchoolRoute: AuthenticatedSchoolRouteWithChildren,
   AuthenticatedStudentRoute: AuthenticatedStudentRouteWithChildren,
 }
@@ -532,6 +885,13 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiApprovalsBulkRoute: ApiApprovalsBulkRoute,
+  ApiAdminsIndexRoute: ApiAdminsIndexRoute,
+  ApiAnalyticsIndexRoute: ApiAnalyticsIndexRoute,
+  ApiApprovalsIndexRoute: ApiApprovalsIndexRoute,
+  ApiReportsIndexRoute: ApiReportsIndexRoute,
+  ApiSchoolsIndexRoute: ApiSchoolsIndexRoute,
+  ApiStudentsIndexRoute: ApiStudentsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

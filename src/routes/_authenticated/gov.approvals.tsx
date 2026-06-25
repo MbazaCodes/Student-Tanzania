@@ -1,3 +1,4 @@
+﻿// src/routes/_authenticated/gov.approvals.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { ApprovalsInbox } from "@/components/tsid/approvals-inbox";
 

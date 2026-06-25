@@ -1,0 +1,71 @@
+﻿{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TSID Government API",
+    "description": "Tanzania Student Identification System - Government Portal API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "TSID Team",
+      "email": "support@tsid.go.tz"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://student-tanzania.vercel.app/api",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:5173/api",
+      "description": "Development Server"
+    }
+  ],
+  "paths": {
+    "/students": {
+      "get": {
+        "summary": "Get all students",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "region", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/schools": {
+      "get": {
+        "summary": "Get all schools",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "region", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/admins": {
+      "get": {
+        "summary": "Get all admins",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "role", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/approvals": {
+      "get": {
+        "summary": "Get all approvals",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority", "in": "query", "schema": { "type": "string" } }
+        ]
+      }
+    },
+    "/analytics": {
+      "get": {
+        "summary": "Get dashboard analytics"
+      }
+    },
+    "/reports": {
+      "post": {
+        "summary": "Generate a report"
+      }
+    }
+  }
+}
