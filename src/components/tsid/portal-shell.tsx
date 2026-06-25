@@ -231,9 +231,9 @@ export function PortalShell({ title, subtitle, items }: {
             boxShadow: "0 1px 4px rgba(0,40,85,.06)",
           }}>
 
-            {/* Left: portal name + breadcrumb */}
+            {/* Left: current page + breadcrumb (NOT the portal title — sidebar shows that) */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {/* Accent dot */}
+              {/* Accent bar */}
               <div style={{
                 width: 4, height: 32, borderRadius: 4,
                 background: meta.accent, flexShrink: 0,
@@ -242,8 +242,11 @@ export function PortalShell({ title, subtitle, items }: {
                 <div style={{
                   fontFamily: "var(--font-display)", fontWeight: 800,
                   fontSize: 15, color: "var(--foreground)", lineHeight: 1.1,
+                  textTransform: "capitalize",
                 }}>
-                  {title}
+                  {segments.length > 1
+                    ? segments[segments.length - 1].replace(/-/g, " ")
+                    : t("nav_dashboard")}
                 </div>
                 {/* Breadcrumb */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
