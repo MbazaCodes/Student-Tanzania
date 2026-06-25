@@ -28,6 +28,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 020 | `020_change_requests.sql` | Change request / approval workflow table + RLS |
 | 021 | `021_storage_and_profile.sql` | profiles storage bucket + change_requests.request_type (delete requests) |
 | 022 | `022_letter_requests.sql` | Student letter request system (request → school approval → PDF) |
+| 023 | `023_student_self_update.sql` | Allow students to update their own record (own profile photo) |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.

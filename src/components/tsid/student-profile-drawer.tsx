@@ -59,6 +59,16 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
 
     const { major, minor } = classifyStudentChanges(changes);
     let submitted = 0;
+    let appliedDirect = false;
+
+    // Students may save their OWN photo directly (their own image, low risk).
+    // It's pulled out of the approval-bound minor set.
+    if (viewerRole === "student" && "photo" in minor) {
+      const { error } = await supabase.from("students").update({ photo: minor.photo.new }).eq("tsid", tsid);
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      delete minor.photo;
+      appliedDirect = true;
+    }
 
     if (Object.keys(minor).length > 0) {
       if (isSchool) {
@@ -86,7 +96,9 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
       submitted++;
     }
     setSaving(false); setEditing(false); refetch(); onChanged?.();
-    toast.success(submitted > 0 ? "Change request submitted for approval" : "Saved");
+    if (submitted > 0 && appliedDirect) toast.success("Photo saved · other changes sent for approval");
+    else if (submitted > 0) toast.success("Change request submitted for approval");
+    else toast.success("Saved");
   }
 
   const canEdit = viewerRole === "student" || isSchool || isGovAdmin;
