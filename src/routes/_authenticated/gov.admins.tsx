@@ -9,18 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, ShieldCheck, MapPin, Building2, Copy, Crown } from "lucide-react";
+import { Plus, ShieldCheck, MapPin, Building2, Copy, Crown, MoreVertical, KeyRound, Trash2, Pencil, StickyNote } from "lucide-react";
 import { TZ_REGIONS, TZ_DISTRICTS } from "@/lib/tz-geo";
 
 export const Route = createFileRoute("/_authenticated/gov/admins")({ component: Page });
 
 type AdminRole = "gov_region" | "gov_district";
+type AdminRow = {
+  auth_uid: string; name: string; email: string; role: string;
+  region: string | null; district: string | null; status: string;
+  notes?: string | null; created_at?: string;
+};
 
 const ROLE_LABELS: Record<string, { label: string; icon: typeof Crown; color: string }> = {
-  gov:          { label: "National Admin",  icon: Crown,       color: "#1EB53A" },
-  admin:        { label: "National Admin",  icon: Crown,       color: "#1EB53A" },
-  gov_region:   { label: "Regional Admin",  icon: MapPin,      color: "#F5C400" },
-  gov_district: { label: "District Admin",  icon: Building2,   color: "#007AFF" },
+  gov:          { label: "National Admin",  icon: Crown,     color: "#1EB53A" },
+  admin:        { label: "National Admin",  icon: Crown,     color: "#1EB53A" },
+  gov_region:   { label: "Regional Admin",  icon: MapPin,    color: "#F5C400" },
+  gov_district: { label: "District Admin",  icon: Building2, color: "#007AFF" },
 };
 
 function genPassword() {
@@ -32,19 +37,19 @@ function Page() {
   const me = useCurrentUser();
   const [open, setOpen] = useState(false);
 
-  // tier: 0 national, 1 regional. district admins (tier 2) cannot access this page
   const canCreateRegional = me.tier === 0;
   const canCreateDistrict = me.tier === 0 || me.tier === 1;
+  const isNational = me.tier === 0;
 
   const { data: admins = [] } = useQuery({
     queryKey: ["gov-admins"],
     queryFn: async () =>
       (await supabase
         .from("admin_users")
-        .select("auth_uid,name,email,role,region,district,status,created_at")
+        .select("auth_uid,name,email,role,region,district,status,notes,created_at")
         .in("role", ["gov", "admin", "gov_region", "gov_district"])
         .order("role")
-      ).data ?? [],
+      ).data as AdminRow[] ?? [],
   });
 
   if (!me.loading && me.tier === 2) {
@@ -60,18 +65,18 @@ function Page() {
     );
   }
 
-  const national  = admins.filter((a) => a.role === "gov" || a.role === "admin");
-  const regional  = admins.filter((a) => a.role === "gov_region");
-  const district  = admins.filter((a) => a.role === "gov_district");
+  const national = admins.filter((a) => a.role === "gov" || a.role === "admin");
+  const regional = admins.filter((a) => a.role === "gov_region");
+  const district = admins.filter((a) => a.role === "gov_district");
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Administrators</h1>
           <p className="text-sm text-muted-foreground">
-            {me.tier === 0
-              ? "Create and oversee Regional and District administrators nationwide."
+            {isNational
+              ? "Create, edit, and oversee Regional and District administrators nationwide."
               : `Create and oversee District administrators in ${me.region}.`}
           </p>
         </div>
@@ -91,7 +96,6 @@ function Page() {
         </Dialog>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "National", value: national.length, color: "#1EB53A" },
@@ -105,7 +109,6 @@ function Page() {
         ))}
       </div>
 
-      {/* Admin list grouped by tier */}
       {[
         { title: "National Administrators", rows: national },
         { title: "Regional Administrators", rows: regional },
@@ -116,37 +119,50 @@ function Page() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <tr><th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Scope</th><th className="px-4 py-3">Status</th></tr>
+                <tr>
+                  <th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Scope</th><th className="px-4 py-3">Status</th>
+                  {isNational && <th className="px-4 py-3 text-right">Actions</th>}
+                </tr>
               </thead>
               <tbody>
                 {group.rows.map((a) => {
                   const meta = ROLE_LABELS[a.role] ?? ROLE_LABELS.gov_district;
+                  const isSelf = a.auth_uid === me.userId;
                   return (
-                    <tr key={a.auth_uid} className="border-t hover:bg-muted/20">
+                    <tr key={a.auth_uid} className="border-t hover:bg-muted/20 align-top">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <meta.icon className="h-3.5 w-3.5" style={{ color: meta.color }} />
                           <span className="font-semibold">{a.name}</span>
+                          {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">YOU</span>}
                         </div>
+                        {a.notes && <div className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1"><StickyNote className="h-3 w-3 mt-0.5 shrink-0" />{a.notes}</div>}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">{a.email}</td>
                       <td className="px-4 py-3 text-xs">
                         {a.role === "gov" || a.role === "admin"
                           ? "Nationwide"
-                          : a.district
-                            ? `${a.district}, ${a.region}`
-                            : a.region ?? "—"}
+                          : a.district ? `${a.district}, ${a.region}` : a.region ?? "—"}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs capitalize" style={{ color: a.status === "active" ? "#16a34a" : "#94a3b8" }}>
                           {a.status}
                         </span>
                       </td>
+                      {isNational && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <AdminActions admin={a} isSelf={isSelf} me={me}
+                              onChange={() => qc.invalidateQueries({ queryKey: ["gov-admins"] })} />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
                 {group.rows.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-sm">None yet.</td></tr>
+                  <tr><td colSpan={isNational ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground text-sm">None yet.</td></tr>
                 )}
               </tbody>
             </table>
@@ -157,58 +173,218 @@ function Page() {
   );
 }
 
+// ── Row actions: edit, reset password, delete ──────────────────────────────
+function AdminActions({ admin, isSelf, me, onChange }: {
+  admin: AdminRow; isSelf: boolean; me: ReturnType<typeof useCurrentUser>; onChange: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+
+  // Don't allow National admins to be edited/deleted (only regional/district)
+  const isNationalTarget = admin.role === "gov" || admin.role === "admin";
+
+  return (
+    <>
+      {/* Edit */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit Administrator</DialogTitle></DialogHeader>
+          <EditAdminForm admin={admin} me={me} onDone={() => { setEditOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password */}
+      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Reset password"><KeyRound className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Reset Password</DialogTitle></DialogHeader>
+          <ResetPasswordForm admin={admin} onDone={() => setPwOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete — not self, not national */}
+      {!isSelf && !isNationalTarget && (
+        <Dialog open={delOpen} onOpenChange={setDelOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost" title="Delete" className="text-red-600 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Delete Administrator</DialogTitle></DialogHeader>
+            <DeleteAdminConfirm admin={admin} onDone={() => { setDelOpen(false); onChange(); }} />
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+function EditAdminForm({ admin, me, onDone }: { admin: AdminRow; me: ReturnType<typeof useCurrentUser>; onDone: () => void }) {
+  const [name, setName] = useState(admin.name);
+  const [status, setStatus] = useState(admin.status);
+  const [notes, setNotes] = useState(admin.notes ?? "");
+  const [region, setRegion] = useState(admin.region ?? "");
+  const [district, setDistrict] = useState(admin.district ?? "");
+  const [loading, setLoading] = useState(false);
+  const isDistrict = admin.role === "gov_district";
+  const districts = region ? (TZ_DISTRICTS[region] ?? []) : [];
+
+  async function save() {
+    setLoading(true);
+    const { error } = await supabase.from("admin_users").update({
+      name, status, notes: notes || null,
+      region: region || null,
+      district: isDistrict ? (district || null) : null,
+    }).eq("auth_uid", admin.auth_uid);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "admin:edit", message: `Edited admin ${name} (${admin.email})`,
+      by_name: me.fullName ?? "National Admin", by_role: me.role ?? "gov", by_ref: me.userId,
+    });
+    setLoading(false);
+    toast.success("Saved");
+    onDone();
+  }
+
+  return (
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5"><Label>Full Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="space-y-1.5">
+        <Label>Region</Label>
+        <Select value={region} onValueChange={(v) => { setRegion(v); setDistrict(""); }}>
+          <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
+          <SelectContent>{TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      {isDistrict && (
+        <div className="space-y-1.5">
+          <Label>District</Label>
+          <Select value={district} onValueChange={setDistrict} disabled={!region}>
+            <SelectTrigger><SelectValue placeholder="Select district" /></SelectTrigger>
+            <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <Label>Status</Label>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5"><Label>Notes / Remarks</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note about this admin" /></div>
+      <Button className="w-full bg-primary" onClick={save} disabled={loading}>{loading ? "Saving…" : "Save changes"}</Button>
+    </div>
+  );
+}
+
+function ResetPasswordForm({ admin, onDone }: { admin: AdminRow; onDone: () => void }) {
+  const [pw, setPw] = useState(genPassword());
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function reset() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "reset_password", target_uid: admin.auth_uid, new_password: pw },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    setDone(true);
+    toast.success("Password reset");
+  }
+
+  return (
+    <div className="space-y-3 py-2">
+      <p className="text-sm text-muted-foreground">Set a new password for <strong>{admin.name}</strong> ({admin.email}).</p>
+      <div className="flex gap-2">
+        <Input className="font-mono" value={pw} onChange={(e) => setPw(e.target.value)} />
+        <Button variant="outline" size="sm" onClick={() => setPw(genPassword())}>↻</Button>
+      </div>
+      {done ? (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm">
+          <div className="font-semibold text-emerald-800 mb-1">✅ New password set</div>
+          <div className="font-mono flex items-center justify-between">
+            {pw}
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(pw); toast.success("Copied"); }}><Copy className="h-3.5 w-3.5" /></Button>
+          </div>
+          <Button className="w-full mt-3" variant="outline" onClick={onDone}>Done</Button>
+        </div>
+      ) : (
+        <Button className="w-full bg-primary" onClick={reset} disabled={loading}>{loading ? "Resetting…" : "Reset password"}</Button>
+      )}
+    </div>
+  );
+}
+
+function DeleteAdminConfirm({ admin, onDone }: { admin: AdminRow; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function del() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "delete_admin", target_uid: admin.auth_uid },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    toast.success("Admin deleted");
+    onDone();
+  }
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm">Permanently delete <strong>{admin.name}</strong> ({admin.email})? This removes their login and admin access. This cannot be undone.</p>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onDone}>Cancel</Button>
+        <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>
+          {loading ? "Deleting…" : "Delete"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Create form (unchanged logic, calls edge fn) ───────────────────────────
 function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
   me: ReturnType<typeof useCurrentUser>;
-  canCreateRegional: boolean;
-  canCreateDistrict: boolean;
-  onDone: () => void;
+  canCreateRegional: boolean; canCreateDistrict: boolean; onDone: () => void;
 }) {
-  // National can choose; Regional is locked to district in own region
   const [adminRole, setAdminRole] = useState<AdminRole>(canCreateRegional ? "gov_region" : "gov_district");
-  const [name, setName]       = useState("");
-  const [email, setEmail]     = useState("");
-  const [region, setRegion]   = useState(me.tier === 1 ? (me.region ?? "") : "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [region, setRegion] = useState(me.tier === 1 ? (me.region ?? "") : "");
   const [district, setDistrict] = useState("");
   const [password, setPassword] = useState(genPassword());
   const [loading, setLoading] = useState(false);
-  const [issued, setIssued]   = useState<{ email: string; password: string } | null>(null);
+  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
 
   const districts = region ? (TZ_DISTRICTS[region] ?? []) : [];
   const needsDistrict = adminRole === "gov_district";
-  const regionLocked  = me.tier === 1; // regional admins can't change region
+  const regionLocked = me.tier === 1;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !email || !region) { toast.error("Fill name, email and region."); return; }
     if (needsDistrict && !district) { toast.error("Select a district."); return; }
     setLoading(true);
-
-    // Call the create-admin Edge Function (service-role, bypasses email validation)
     const { data, error } = await supabase.functions.invoke("create-admin", {
-      body: {
-        name, email, password,
-        role: adminRole,
-        region,
-        district: needsDistrict ? district : null,
-      },
+      body: { name, email, password, role: adminRole, region, district: needsDistrict ? district : null },
     });
-
     if (error) {
-      // Edge function returns error detail in the response body
       let msg = error.message;
       try {
         const ctx = (error as { context?: { body?: unknown } }).context;
-        if (ctx?.body) {
-          const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
-          if (parsed?.error) msg = parsed.error;
-        }
-      } catch { /* keep original */ }
-      toast.error(msg);
-      setLoading(false);
-      return;
+        if (ctx?.body) { const p = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body; if (p?.error) msg = p.error; }
+      } catch { /* keep */ }
+      toast.error(msg); setLoading(false); return;
     }
     if (data?.error) { toast.error(data.error); setLoading(false); return; }
-
     setLoading(false);
     setIssued({ email, password });
     toast.success("Administrator created!");
@@ -228,7 +404,6 @@ function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
             toast.success("Copied!");
           }}><Copy className="h-4 w-4 mr-2" /> Copy credentials</Button>
         </div>
-        <p className="text-xs text-muted-foreground">The new admin should change their password after first login.</p>
         <Button variant="outline" className="w-full" onClick={onDone}>Done</Button>
       </div>
     );
@@ -236,7 +411,6 @@ function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
 
   return (
     <form onSubmit={submit} className="space-y-4 py-2">
-      {/* Role selection — national only */}
       {canCreateRegional && (
         <div className="space-y-1.5">
           <Label>Admin Level *</Label>
@@ -254,43 +428,26 @@ function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
           You're creating a <strong>District Admin</strong> in <strong>{me.region}</strong>.
         </div>
       )}
-
       <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 space-y-1.5">
-          <Label>Full Name *</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Asha Mwakyusa" required />
-        </div>
-        <div className="col-span-2 space-y-1.5">
-          <Label>Email *</Label>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@tsid.go.tz" required />
-        </div>
-
-        {/* Region */}
+        <div className="col-span-2 space-y-1.5"><Label>Full Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+        <div className="col-span-2 space-y-1.5"><Label>Email *</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@tsid.go.tz" required /></div>
         <div className="space-y-1.5">
           <Label>Region *</Label>
           <Select value={region} onValueChange={(v) => { setRegion(v); setDistrict(""); }} disabled={regionLocked}>
             <SelectTrigger><SelectValue placeholder="Select region" /></SelectTrigger>
-            <SelectContent>
-              {TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
+            <SelectContent>{TZ_REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-
-        {/* District — only for district admins */}
         {needsDistrict && (
           <div className="space-y-1.5">
             <Label>District *</Label>
             <Select value={district} onValueChange={setDistrict} disabled={!region}>
               <SelectTrigger><SelectValue placeholder={region ? "Select district" : "Region first"} /></SelectTrigger>
-              <SelectContent>
-                {districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
+              <SelectContent>{districts.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         )}
       </div>
-
-      {/* Credentials */}
       <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2">
         <Label>Temporary Password *</Label>
         <div className="flex gap-2">
@@ -298,10 +455,7 @@ function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
           <Button type="button" variant="outline" size="sm" onClick={() => setPassword(genPassword())}>↻</Button>
         </div>
       </div>
-
-      <Button type="submit" className="w-full bg-primary" disabled={loading}>
-        {loading ? "Creating…" : "👤 Create Administrator"}
-      </Button>
+      <Button type="submit" className="w-full bg-primary" disabled={loading}>{loading ? "Creating…" : "👤 Create Administrator"}</Button>
     </form>
   );
 }

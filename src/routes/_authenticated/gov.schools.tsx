@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, BadgeCheck, BadgeX, Copy } from "lucide-react";
+import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote } from "lucide-react";
 import { hashPassword } from "@/lib/tsid";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
@@ -282,7 +282,7 @@ function Page() {
 
   const { data: schools = [] } = useQuery({
     queryKey: ["gov-schools"],
-    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status").order("school_name")).data ?? [],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes").order("school_name")).data ?? [],
   });
 
   async function toggleStatus(code: string, currentStatus: string) {
@@ -337,7 +337,11 @@ function Page() {
               {schools.map((s) => (
                 <tr key={s.school_code} className="border-t hover:bg-muted/20">
                   <td className="px-4 py-3 font-mono text-xs text-primary font-bold">{s.school_code}</td>
-                  <td className="px-4 py-3"><div className="font-semibold">{s.school_name}</div><div className="text-xs text-muted-foreground">{s.type}</div></td>
+                  <td className="px-4 py-3">
+                    <div className="font-semibold">{s.school_name}</div>
+                    <div className="text-xs text-muted-foreground">{s.type}</div>
+                    {s.notes && <div className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1"><StickyNote className="h-3 w-3 mt-0.5 shrink-0" />{s.notes}</div>}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{s.region}{s.district ? ` · ${s.district}` : ""}</td>
                   <td className="px-4 py-3 font-mono text-xs">{s.cred_username}</td>
                   <td className="px-4 py-3">
@@ -346,9 +350,15 @@ function Page() {
                       : <span className="inline-flex items-center gap-1 text-muted-foreground text-xs"><BadgeX className="h-3.5 w-3.5" /> {s.status}</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="outline" onClick={() => toggleStatus(s.school_code, s.status)}>
-                      {s.status === "active" ? "Suspend" : "Activate"}
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => toggleStatus(s.school_code, s.status)} title={s.status === "active" ? "Suspend" : "Activate"}>
+                        {s.status === "active" ? <BadgeX className="h-3.5 w-3.5" /> : <BadgeCheck className="h-3.5 w-3.5" />}
+                      </Button>
+                      {me.tier === 0 && (
+                        <SchoolActions school={s} actorName={me.fullName ?? "Gov Admin"}
+                          onChange={() => qc.invalidateQueries({ queryKey: ["gov-schools"] })} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -528,5 +538,89 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
         {loading ? "Registering…" : "🏫 Register School"}
       </Button>
     </form>
+  );
+}
+
+// ── School row actions: edit / notes / delete (National only) ──────────────
+function SchoolActions({ school, actorName, onChange }: {
+  school: { school_code: string; school_name: string; type: string; region: string; district: string; ward: string; notes?: string | null };
+  actorName: string; onChange: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  return (
+    <>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit School</DialogTitle></DialogHeader>
+          <EditSchoolForm school={school} actorName={actorName} onDone={() => { setEditOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={delOpen} onOpenChange={setDelOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="ghost" title="Delete" className="text-red-600 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Delete School</DialogTitle></DialogHeader>
+          <DeleteSchoolConfirm school={school} actorName={actorName} onDone={() => { setDelOpen(false); onChange(); }} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function EditSchoolForm({ school, actorName, onDone }: {
+  school: { school_code: string; school_name: string; type: string; notes?: string | null };
+  actorName: string; onDone: () => void;
+}) {
+  const [name, setName] = useState(school.school_name);
+  const [notes, setNotes] = useState(school.notes ?? "");
+  const [loading, setLoading] = useState(false);
+  async function save() {
+    setLoading(true);
+    const { error } = await supabase.from("schools").update({
+      school_name: name, notes: notes || null,
+    }).eq("school_code", school.school_code);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "school:edit", message: `Edited school ${school.school_code} — ${name}`,
+      by_name: actorName, by_role: "gov", by_ref: school.school_code,
+    });
+    setLoading(false); toast.success("Saved"); onDone();
+  }
+  return (
+    <div className="space-y-3 py-2">
+      <div className="space-y-1.5"><Label>School Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Notes / Remarks</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note about this school" /></div>
+      <Button className="w-full bg-primary" onClick={save} disabled={loading}>{loading ? "Saving…" : "Save changes"}</Button>
+    </div>
+  );
+}
+
+function DeleteSchoolConfirm({ school, actorName, onDone }: {
+  school: { school_code: string; school_name: string }; actorName: string; onDone: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  async function del() {
+    setLoading(true);
+    const { error } = await supabase.from("schools").delete().eq("school_code", school.school_code);
+    if (error) { toast.error(error.message); setLoading(false); return; }
+    await supabase.from("activity_logs").insert({
+      action: "school:delete", message: `Deleted school ${school.school_code} — ${school.school_name}`,
+      by_name: actorName, by_role: "gov", by_ref: school.school_code,
+    });
+    setLoading(false); toast.success("School deleted"); onDone();
+  }
+  return (
+    <div className="space-y-4 py-2">
+      <p className="text-sm">Permanently delete <strong>{school.school_name}</strong> ({school.school_code})? This cannot be undone.</p>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onDone}>Cancel</Button>
+        <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={del} disabled={loading}>{loading ? "Deleting…" : "Delete"}</Button>
+      </div>
+    </div>
   );
 }
