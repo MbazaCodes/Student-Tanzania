@@ -64,8 +64,16 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
     // Students may save their OWN photo directly (their own image, low risk).
     // It's pulled out of the approval-bound minor set.
     if (viewerRole === "student" && "photo" in minor) {
-      const { error } = await supabase.from("students").update({ photo: minor.photo.new }).eq("tsid", tsid);
-      if (error) { toast.error(error.message); setSaving(false); return; }
+      const { data: updated, error } = await supabase
+        .from("students")
+        .update({ photo: minor.photo.new })
+        .eq("tsid", tsid)
+        .select("tsid");
+      if (error) { toast.error(`Photo save failed: ${error.message}`); setSaving(false); return; }
+      if (!updated || updated.length === 0) {
+        toast.error("Photo could not be saved — permission denied. Run migration 023 (student self-update) and ensure your account has a login.");
+        setSaving(false); return;
+      }
       delete minor.photo;
       appliedDirect = true;
     }
