@@ -170,6 +170,16 @@ export function PortalShell({ title, subtitle, items }: {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--background)" }}>
+      <style>{`
+        .portal-desktop-sidebar { display: flex; }
+        .portal-mobile-bar      { display: none; }
+        .portal-mobile-drawer   { display: none; }
+        @media (max-width: 768px) {
+          .portal-desktop-sidebar { display: none !important; }
+          .portal-mobile-bar      { display: flex !important; }
+          .portal-mobile-drawer   { display: flex !important; }
+        }
+      `}</style>
 
       {/* Mobile top bar */}
       <div className="portal-mobile-bar" style={{
