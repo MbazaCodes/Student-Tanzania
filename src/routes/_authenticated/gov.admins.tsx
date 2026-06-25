@@ -183,37 +183,31 @@ function CreateAdminForm({ me, canCreateRegional, canCreateDistrict, onDone }: {
     if (needsDistrict && !district) { toast.error("Select a district."); return; }
     setLoading(true);
 
-    // Create the auth user via signUp (anon-key safe)
-    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { role: adminRole, name } },
+    // Call the create-admin Edge Function (service-role, bypasses email validation)
+    const { data, error } = await supabase.functions.invoke("create-admin", {
+      body: {
+        name, email, password,
+        role: adminRole,
+        region,
+        district: needsDistrict ? district : null,
+      },
     });
-    if (signUpErr) { toast.error(signUpErr.message); setLoading(false); return; }
-    const newUid = signUpData.user?.id;
-    if (!newUid) { toast.error("Could not create auth user."); setLoading(false); return; }
 
-    // Insert admin_users row
-    const { error: insErr } = await supabase.from("admin_users").insert({
-      auth_uid: newUid,
-      name, email,
-      role: adminRole,
-      region,
-      district: needsDistrict ? district : null,
-      ministry: "Ministry of Education, Science and Technology",
-      status: "active",
-      created_by: me.userId,
-    });
-    if (insErr) { toast.error(insErr.message); setLoading(false); return; }
-
-    // Mirror into user_roles
-    await supabase.from("user_roles").upsert({ user_id: newUid, role: adminRole });
-
-    // Log
-    await supabase.from("activity_logs").insert({
-      action: "admin:create",
-      message: `Created ${adminRole === "gov_region" ? "Regional" : "District"} admin ${name} (${email})`,
-      by_name: me.fullName ?? "Admin", by_role: me.role ?? "gov", by_ref: me.userId,
-    });
+    if (error) {
+      // Edge function returns error detail in the response body
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: { body?: unknown } }).context;
+        if (ctx?.body) {
+          const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+          if (parsed?.error) msg = parsed.error;
+        }
+      } catch { /* keep original */ }
+      toast.error(msg);
+      setLoading(false);
+      return;
+    }
+    if (data?.error) { toast.error(data.error); setLoading(false); return; }
 
     setLoading(false);
     setIssued({ email, password });
