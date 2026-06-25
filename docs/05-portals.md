@@ -95,3 +95,30 @@ Route shell: `student.tsx`.
 - Front: photo, TSID number, name, DOB, level, school, QR code, coat of arms + TSID logo
 - Back: parent/guardian info, important notices, verification URL, flag stripe
 - Exportable to PNG/PDF via html-to-image + jsPDF
+
+---
+
+## Profiles & Approval Workflow (added)
+
+### Clickable profiles
+- **School Students** / **Gov Students** — click any student row to open the
+  `StudentProfileDrawer` (slide-in) showing full profile + edit.
+- **Gov Schools** — school rows support edit/delete/reset (National) + notes.
+
+### Edit routing (change requests)
+Editing a student creates a `change_requests` row unless the editor is a gov
+admin (who apply directly):
+- **Student edits own profile**: major (name, DOB, TSID, school transfer) →
+  admin approval; minor (photo, phone, address, parent contact) → school approval
+- **School edits a student**: minor applies immediately; major → admin approval
+- **Gov admin edits**: applies directly
+
+### Approvals inbox
+- **School → Approvals**: minor student change requests for that school
+- **Gov → Approvals**: major student changes + school changes, scoped by tier
+- Approve → applies the change to the underlying table + logs it; Reject → logs
+
+### Bulk upload
+- **School Students → Bulk upload**: CSV/Excel of students (per row → create-student)
+- **Gov Schools → Bulk upload**: CSV/Excel of schools (per row → create-school)
+- Downloadable CSV + Excel templates; header validation; result summary

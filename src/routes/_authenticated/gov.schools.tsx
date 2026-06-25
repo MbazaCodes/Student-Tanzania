@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound } from "lucide-react";
+import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound, Upload } from "lucide-react";
+import { BulkUpload } from "@/components/tsid/bulk-upload";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
 
@@ -298,6 +299,8 @@ function Page() {
           <h1 className="text-2xl font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Schools</h1>
           <p className="text-sm text-muted-foreground">Register institutions and issue their admin credentials.</p>
         </div>
+        <div className="flex gap-2">
+        <BulkSchoolUpload actorName={me.fullName ?? "Gov Admin"} me={me} onDone={() => qc.invalidateQueries({ queryKey: ["gov-schools"] })} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary"><Plus className="h-4 w-4 mr-2" /> Register school</Button>
@@ -310,6 +313,7 @@ function Page() {
             />
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -695,6 +699,48 @@ function ResetSchoolPassword({ school }: {
             </Button>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Bulk school upload (CSV/Excel) ─────────────────────────────────────────
+function BulkSchoolUpload({ actorName, me, onDone }: { actorName: string; me: any; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline"><Upload className="h-4 w-4 mr-2" /> Bulk upload</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Bulk Upload Schools</DialogTitle></DialogHeader>
+        <BulkUpload
+          mode="schools"
+          onRows={async (rows) => {
+            let ok = 0, failed = 0; const errors: string[] = [];
+            for (const row of rows) {
+              if (!row.school_name?.trim() || !row.region?.trim() || !row.district?.trim()) {
+                failed++; errors.push(`${row.school_name || "row"}: missing name/region/district`); continue;
+              }
+              const prefix = (row.region || "TZ").slice(0, 2).toUpperCase();
+              const code = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+              const email = row.email?.trim() || `${code.toLowerCase()}@schools.tsid.go.tz`;
+              const password = "sc" + Math.random().toString(36).slice(2, 8).toUpperCase() + "!";
+              const { data, error } = await supabase.functions.invoke("create-school", {
+                body: {
+                  school_code: code, school_name: row.school_name, type: row.type || "Primary School",
+                  region: row.region, district: row.district, ward: row.ward || "",
+                  address: row.address || null, phone: row.phone || null,
+                  email, password,
+                },
+              });
+              if (error || data?.error) { failed++; errors.push(`${row.school_name}: ${data?.error ?? error?.message}`); }
+              else ok++;
+            }
+            onDone();
+            return { ok, failed, errors };
+          }}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/lib/theme";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
 
 export const Route = createFileRoute("/_authenticated/gov/students")({ component: Page });
 
 function Page() {
   const { t } = useTheme();
+  const qc = useQueryClient();
   const [search, setSearch] = useState(""); const [regionFilter, setRegionFilter] = useState("");
+  const [profileTsid, setProfileTsid] = useState<string | null>(null);
 
   const { data: students=[] } = useQuery({ queryKey:["gov-students"], queryFn: async()=>(await supabase.from("students").select("tsid,fullname,dob,gender,photo,status,level,region,district,school_code,school_name,created_at").order("created_at",{ascending:false})).data??[] });
   const { data: schools=[]  } = useQuery({ queryKey:["gov-schools-light"], queryFn: async()=>(await supabase.from("schools").select("school_code,school_name,region")).data??[] });
@@ -60,7 +63,7 @@ function Page() {
             </thead>
             <tbody>
               {filtered.map((st)=>(
-                <tr key={st.tsid} className="border-t hover:bg-muted/20">
+                <tr key={st.tsid} className="border-t hover:bg-muted/20 cursor-pointer" onClick={() => setProfileTsid(st.tsid)}>
                   <td className="px-4 py-2">{st.photo?<img src={st.photo} className="w-9 h-12 object-cover rounded-md border" alt=""/>:<div className="w-9 h-12 rounded-md border bg-muted flex items-center justify-center text-lg">👤</div>}</td>
                   <td className="px-4 py-3"><div className="font-semibold">{st.fullname}</div><div className="text-xs font-mono text-muted-foreground">{st.tsid}</div><div className="text-xs text-muted-foreground">{st.gender??"—"} · {st.dob??"—"}</div></td>
                   <td className="px-4 py-3"><div className="text-sm font-medium">{st.school_name??"—"}</div><div className="text-xs font-mono text-muted-foreground">{st.school_code??""}</div></td>
@@ -74,6 +77,15 @@ function Page() {
           </table>
         </div>
       </div>
+
+      {profileTsid && (
+        <StudentProfileDrawer
+          tsid={profileTsid}
+          viewerRole="admin"
+          onClose={() => setProfileTsid(null)}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["gov-students"] })}
+        />
+      )}
     </div>
   );
 }

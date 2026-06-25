@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IdCard } from "@/components/tsid/id-card";
 
@@ -18,6 +20,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 
 function Page() {
   const me = useCurrentUser();
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data: student } = useQuery({
     enabled: !!me.tsid,
@@ -45,9 +48,12 @@ function Page() {
           <div className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Karibu, {firstName}! 👋</div>
           <div className="text-sm opacity-80 mt-1 font-mono">{student.tsid}</div>
         </div>
-        <Button asChild variant="secondary">
-          <Link to="/student/id">🪪 View My ID Card →</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setEditOpen(true)}>✏️ Edit Profile</Button>
+          <Button asChild variant="secondary">
+            <Link to="/student/id">🪪 View My ID Card →</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -115,6 +121,14 @@ function Page() {
           }} showBack={false} downloadable={false} />
         </div>
       </div>
+
+      {editOpen && me.tsid && (
+        <StudentProfileDrawer
+          tsid={me.tsid}
+          viewerRole="student"
+          onClose={() => setEditOpen(false)}
+        />
+      )}
     </div>
   );
 }
