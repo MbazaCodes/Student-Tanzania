@@ -11,10 +11,12 @@ export type NavItem = { to: string; label: string; icon?: ReactNode };
 
 // Role → portal identity
 const ROLE_META: Record<string, { label: string; sub: string; accent: string; badge: string }> = {
-  gov:     { label: "Government Portal",  sub: "WIZARA YA ELIMU",          accent: "#1EB53A", badge: "GOV"     },
-  admin:   { label: "Government Portal",  sub: "WIZARA YA ELIMU",          accent: "#1EB53A", badge: "ADMIN"   },
-  school:  { label: "School Portal",      sub: "SHULE ADMIN",              accent: "#F5C400", badge: "SCHOOL"  },
-  student: { label: "Student Portal",     sub: "MWANAFUNZI / MZAZI",       accent: "#007AFF", badge: "STUDENT" },
+  gov:          { label: "Government Portal", sub: "WIZARA YA ELIMU",    accent: "#1EB53A", badge: "NATIONAL" },
+  admin:        { label: "Government Portal", sub: "WIZARA YA ELIMU",    accent: "#1EB53A", badge: "NATIONAL" },
+  gov_region:   { label: "Regional Portal",  sub: "REGIONAL ADMIN",     accent: "#F5C400", badge: "REGIONAL" },
+  gov_district: { label: "District Portal",  sub: "DISTRICT ADMIN",     accent: "#007AFF", badge: "DISTRICT" },
+  school:       { label: "School Portal",    sub: "SHULE ADMIN",        accent: "#F5C400", badge: "SCHOOL"   },
+  student:      { label: "Student Portal",   sub: "MWANAFUNZI / MZAZI", accent: "#007AFF", badge: "STUDENT"  },
 };
 
 export function PortalShell({ title, subtitle, items }: {

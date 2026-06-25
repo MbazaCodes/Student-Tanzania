@@ -17,10 +17,25 @@ export function generateTsidNo() {
   return `TSID-${year}-${suffix}`;
 }
 
-export type Role = "admin" | "gov" | "school" | "student";
+export type Role = "admin" | "gov" | "gov_region" | "gov_district" | "school" | "student";
+
+/** Admin levels that use the /gov portal */
+export const GOV_ROLES: Role[] = ["admin", "gov", "gov_region", "gov_district"];
+
+export function isGovRole(role: Role | null | undefined): boolean {
+  return !!role && GOV_ROLES.includes(role);
+}
+
+/** Scope tier: 0 = national, 1 = regional, 2 = district */
+export function adminTier(role: Role | null | undefined): 0 | 1 | 2 | null {
+  if (role === "admin" || role === "gov") return 0;
+  if (role === "gov_region") return 1;
+  if (role === "gov_district") return 2;
+  return null;
+}
 
 export function roleHome(role: Role | null | undefined): string {
-  if (role === "admin" || role === "gov") return "/gov";
+  if (isGovRole(role)) return "/gov";
   if (role === "school") return "/school";
   if (role === "student") return "/student";
   return "/auth";
