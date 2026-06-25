@@ -19,6 +19,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 011 | `011_admin_hierarchy.sql` | National/Regional/District roles, scope helper fns, scoped RLS |
 | 012 | `012_fix_rls_recursion.sql` | **Critical:** fix admin_users RLS recursion (was returning empty everywhere) |
 | 013 | `013_management_notes.sql` | notes columns + National-only delete/update policies |
+| 014 | `014_audit_logs_policy.sql` | Allow trigger-driven inserts into audit_logs (fixes school create RLS error) |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.
