@@ -1,15 +1,5 @@
-﻿{
-  "framework": null,
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "outputDirectory": "dist/client",
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/server/server.js"
-    }
-  ]
+  "outputDirectory": "dist/client"
 }
