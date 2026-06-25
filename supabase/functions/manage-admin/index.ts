@@ -65,9 +65,13 @@ Deno.serve(async (req) => {
       return json({ error: "You cannot delete your own account" }, 400);
     }
 
-    // Look up target for logging
-    const { data: target } = await admin
-      .from("admin_users").select("name,email,role").eq("auth_uid", target_uid).maybeSingle();
+    // Look up target for logging (admin actions only — others use tsid/school_code)
+    let target: { name?: string; email?: string; role?: string } | null = null;
+    if (adminActions && target_uid) {
+      const { data } = await admin
+        .from("admin_users").select("name,email,role").eq("auth_uid", target_uid).maybeSingle();
+      target = data;
+    }
 
     if (action === "reset_password") {
       if (!new_password || new_password.length < 6) {
