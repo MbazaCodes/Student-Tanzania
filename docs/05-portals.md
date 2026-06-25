@@ -122,3 +122,36 @@ admin (who apply directly):
 - **School Students → Bulk upload**: CSV/Excel of students (per row → create-student)
 - **Gov Schools → Bulk upload**: CSV/Excel of schools (per row → create-school)
 - Downloadable CSV + Excel templates; header validation; result summary
+
+---
+
+## Letter Requests (added)
+
+Students request official letters; schools approve; approved letters become
+downloadable PDFs with TZ coat-of-arms letterhead.
+
+### Student — My Applications (`/student/applications`)
+- **New Request** form:
+  - Sector: Government / Private
+  - Purpose dropdown (sector-specific):
+    - Government: NHIF, Wizara Services, NECTA Services, Government Grants & Loans (HESLB), Other
+    - Private: Internship, Grants/Funds/Loans, Scholarship, Other
+  - Reason dropdown + "Other (type below)" manual input
+  - Addressed-To (recipient) name + address
+  - Region → District cascade
+  - Fee auto-determined per purpose (free/paid)
+- **My Applications list**: status (pending/approved/rejected), FREE/PAID badge,
+  paid ✓ indicator; **Download** button (PDF) appears when approved AND (free OR paid)
+
+### School — Letter Requests (`/school/letters`)
+- Pending/approved/rejected tabs
+- Approve (generates ref no.), Approve (paid/unpaid) for paid letters, Reject
+- Approval makes the letter downloadable by the student
+
+### PDF letter (`components/tsid/letter-document.tsx`)
+- A4, TZ coat of arms, JAMHURI YA MUUNGANO WA TANZANIA letterhead
+- Ref no + date, recipient block, bilingual body, student detail table,
+  head-of-school signature, verify URL
+- Downloaded via html-to-image → jsPDF
+
+DB: `022_letter_requests.sql` (letter_requests table + scoped RLS).
