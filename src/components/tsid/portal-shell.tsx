@@ -1,41 +1,51 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ASSETS } from "@/lib/tsid";
 import { useTheme } from "@/lib/theme";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { LogOut, Moon, Sun, Languages, Menu, X } from "lucide-react";
+import { LogOut, Moon, Sun, Languages, Menu, X, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type NavItem = { to: string; label: string; icon?: ReactNode };
 
-export function PortalShell({ title, items, subtitle }: {
+// Role → portal identity
+const ROLE_META: Record<string, { label: string; sub: string; accent: string; badge: string }> = {
+  gov:     { label: "Government Portal",  sub: "WIZARA YA ELIMU",          accent: "#1EB53A", badge: "GOV"     },
+  admin:   { label: "Government Portal",  sub: "WIZARA YA ELIMU",          accent: "#1EB53A", badge: "ADMIN"   },
+  school:  { label: "School Portal",      sub: "SHULE ADMIN",              accent: "#F5C400", badge: "SCHOOL"  },
+  student: { label: "Student Portal",     sub: "MWANAFUNZI / MZAZI",       accent: "#007AFF", badge: "STUDENT" },
+};
+
+export function PortalShell({ title, subtitle, items }: {
   title: string; subtitle?: string; items: NavItem[];
 }) {
-  const navigate  = useNavigate();
-  const pathname  = useRouterState({ select: (s) => s.location.pathname });
+  const navigate    = useNavigate();
+  const pathname    = useRouterState({ select: (s) => s.location.pathname });
   const { theme, lang, toggleTheme, toggleLang, t } = useTheme();
+  const me          = useCurrentUser();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isDark = theme === "dark";
+  const isDark  = theme === "dark";
+  const role    = me.role ?? "student";
+  const meta    = ROLE_META[role] ?? ROLE_META.student;
 
-  // ── Sidebar colours — match landing page navy/green identity ──────
-  const sidebarBg     = isDark ? "#0a1628" : "#002855";   // deeper navy
+  // ── Sidebar colours ────────────────────────────────────────────────
+  const sidebarBg     = isDark ? "#0a1628" : "#002855";
   const sidebarText   = "#e8f0f8";
   const sidebarSub    = "#93bcd6";
   const sidebarBorder = "rgba(255,255,255,.09)";
-  const activeBg      = "rgba(30,181,58,.18)";            // tz-green tint
+  const activeBg      = `${meta.accent}22`;
   const activeText    = "#ffffff";
   const hoverBg       = "rgba(255,255,255,.06)";
-
-  // ── Main area — clean white/very-light-blue like landing ─────────
-  const mainBg        = "var(--background)";   // matches landing page exactly
-  const topbarBg      = "var(--card)";
-  const topbarBorder  = "var(--border)";
 
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
+
+  // Breadcrumb segments
+  const segments = pathname.split("/").filter(Boolean);
 
   const sidebar = (
     <aside style={{
@@ -48,26 +58,63 @@ export function PortalShell({ title, items, subtitle }: {
 
       {/* Brand */}
       <Link to="/" style={{
-        display: "flex", alignItems: "center", gap: 13,
-        padding: "20px 18px 18px", borderBottom: `1px solid ${sidebarBorder}`,
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "18px 16px 16px", borderBottom: `1px solid ${sidebarBorder}`,
         textDecoration: "none",
       }}>
-        <img src={ASSETS.coat} alt="" style={{ width: 42, height: 42, objectFit: "contain", flexShrink: 0 }} />
+        <img src={ASSETS.coat} alt="" style={{ width: 40, height: 40, objectFit: "contain", flexShrink: 0 }} />
         <div>
           <div style={{
             fontFamily: "var(--font-display)", fontWeight: 900,
-            fontSize: 14, color: "#fff", letterSpacing: -0.2, lineHeight: 1.1,
+            fontSize: 13.5, color: "#fff", letterSpacing: -0.2, lineHeight: 1.15,
           }}>{title}</div>
-          {subtitle && <div style={{
-            fontSize: 8.5, fontWeight: 700, color: "#1EB53A",
-            letterSpacing: 0.9, marginTop: 3, textTransform: "uppercase",
-          }}>{subtitle}</div>}
+          <div style={{
+            fontSize: 8, fontWeight: 800, color: meta.accent,
+            letterSpacing: 1, marginTop: 3, textTransform: "uppercase",
+          }}>{subtitle ?? meta.sub}</div>
         </div>
       </Link>
 
+      {/* User chip */}
+      {!me.loading && me.email && (
+        <div style={{
+          margin: "10px 10px 4px",
+          padding: "10px 12px",
+          borderRadius: 10,
+          background: "rgba(255,255,255,.06)",
+          border: `1px solid ${sidebarBorder}`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Avatar circle */}
+            <div style={{
+              width: 30, height: 30, borderRadius: "50%",
+              background: meta.accent,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 900, fontSize: 12, color: "#fff", flexShrink: 0,
+            }}>
+              {(me.fullName ?? me.email).charAt(0).toUpperCase()}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: 11.5, fontWeight: 700, color: "#fff",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>
+                {me.fullName ?? me.email?.split("@")[0]}
+              </div>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: meta.accent,
+                letterSpacing: 0.8, textTransform: "uppercase", marginTop: 1,
+              }}>
+                {meta.badge}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Nav */}
       <nav aria-label="Portal navigation" style={{
-        flex: 1, padding: "14px 10px",
+        flex: 1, padding: "10px 10px",
         display: "flex", flexDirection: "column", gap: 2,
       }}>
         {items.map((it) => {
@@ -82,7 +129,7 @@ export function PortalShell({ title, items, subtitle }: {
                 fontWeight: active ? 700 : 500,
                 fontSize: 13.5, textDecoration: "none",
                 transition: "all .15s",
-                borderLeft: active ? "3px solid #1EB53A" : "3px solid transparent",
+                borderLeft: active ? `3px solid ${meta.accent}` : "3px solid transparent",
               }}
               onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = hoverBg; }}
               onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
@@ -91,6 +138,7 @@ export function PortalShell({ title, items, subtitle }: {
                 {it.icon}
               </span>
               {it.label}
+              {active && <ChevronRight style={{ width: 12, height: 12, marginLeft: "auto", opacity: 0.5 }} />}
             </Link>
           );
         })}
@@ -100,28 +148,28 @@ export function PortalShell({ title, items, subtitle }: {
       <div style={{ padding: "12px 10px", borderTop: `1px solid ${sidebarBorder}`, display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={toggleTheme}
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11.5, fontWeight: 600 }}>
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11, fontWeight: 600 }}>
             {isDark ? <Sun style={{ width: 13, height: 13 }} /> : <Moon style={{ width: 13, height: 13 }} />}
             {isDark ? "Light" : "Dark"}
           </button>
           <button onClick={toggleLang}
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11.5, fontWeight: 600 }}>
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11, fontWeight: 600 }}>
             <Languages style={{ width: 13, height: 13 }} />
             {lang === "en" ? "Kiswahili" : "English"}
           </button>
         </div>
         <button onClick={signOut}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 13px", borderRadius: 10, border: "none", background: "rgba(239,68,68,.1)", cursor: "pointer", color: "#fca5a5", fontSize: 13.5, fontWeight: 600, transition: "all .15s" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 13px", borderRadius: 10, border: "none", background: "rgba(239,68,68,.1)", cursor: "pointer", color: "#fca5a5", fontSize: 13, fontWeight: 600 }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.2)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,.1)"; }}>
-          <LogOut style={{ width: 15, height: 15 }} /> {t("signout")}
+          <LogOut style={{ width: 14, height: 14 }} /> {t("signout")}
         </button>
       </div>
     </aside>
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: mainBg }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--background)" }}>
 
       {/* Mobile top bar */}
       <div className="md:hidden" style={{
@@ -131,18 +179,18 @@ export function PortalShell({ title, items, subtitle }: {
       }}>
         <div className="tz-flag-stripe" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <img src={ASSETS.coat} alt="" style={{ width: 34, height: 34, objectFit: "contain" }} />
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 15, color: "#fff" }}>{title}</span>
+          <img src={ASSETS.coat} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} />
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 14, color: "#fff" }}>{title}</span>
         </Link>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <button onClick={toggleTheme} style={{ padding: 7, borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub }}>
-            {isDark ? <Sun style={{ width: 16, height: 16 }} /> : <Moon style={{ width: 16, height: 16 }} />}
+            {isDark ? <Sun style={{ width: 15, height: 15 }} /> : <Moon style={{ width: 15, height: 15 }} />}
           </button>
-          <button onClick={toggleLang} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 11, fontWeight: 700 }}>
+          <button onClick={toggleLang} style={{ padding: "5px 9px", borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub, fontSize: 10, fontWeight: 700 }}>
             {lang === "en" ? "SW" : "EN"}
           </button>
           <button onClick={() => setMobileOpen(!mobileOpen)} style={{ padding: 7, borderRadius: 8, border: `1px solid ${sidebarBorder}`, background: "transparent", cursor: "pointer", color: sidebarSub }}>
-            {mobileOpen ? <X style={{ width: 18, height: 18 }} /> : <Menu style={{ width: 18, height: 18 }} />}
+            {mobileOpen ? <X style={{ width: 17, height: 17 }} /> : <Menu style={{ width: 17, height: 17 }} />}
           </button>
         </div>
       </div>
@@ -159,41 +207,108 @@ export function PortalShell({ title, items, subtitle }: {
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <div className="hidden md:flex" style={{ height: "100vh", position: "sticky", top: 0 }}>{sidebar}</div>
 
-        {/* Main content area */}
-        <main id="main-content" style={{ flex: 1, minWidth: 0, overflowY: "auto", display: "flex", flexDirection: "column" }} aria-label="Main content">
+        {/* Main content */}
+        <main id="main-content" style={{ flex: 1, minWidth: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
 
-          {/* Top bar — matches landing page header feel */}
+          {/* ── Top header bar ─────────────────────────────────────────── */}
           <div style={{
-            background: topbarBg,
-            borderBottom: `1px solid ${topbarBorder}`,
+            background: "var(--card)",
+            borderBottom: "1px solid var(--border)",
             padding: "0 28px",
-            height: 56, flexShrink: 0,
+            height: 60, flexShrink: 0,
             display: "flex", alignItems: "center", justifyContent: "space-between",
             position: "sticky", top: 0, zIndex: 10,
-            boxShadow: "0 1px 3px var(--border)",
+            boxShadow: "0 1px 4px rgba(0,40,85,.06)",
           }}>
-            {/* breadcrumb path */}
-            <div style={{ fontSize: 12, color: isDark ? "#64748b" : "#94a3b8", fontWeight: 600, letterSpacing: 0.3 }}>
-              {pathname.split("/").filter(Boolean).map((seg, i, arr) => (
-                <span key={seg}>
-                  <span style={{ textTransform: "capitalize" }}>{seg.replace(/-/g, " ")}</span>
-                  {i < arr.length - 1 && <span style={{ margin: "0 6px", opacity: 0.4 }}>›</span>}
-                </span>
-              ))}
+
+            {/* Left: portal name + breadcrumb */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Accent dot */}
+              <div style={{
+                width: 4, height: 32, borderRadius: 4,
+                background: meta.accent, flexShrink: 0,
+              }} />
+              <div>
+                <div style={{
+                  fontFamily: "var(--font-display)", fontWeight: 800,
+                  fontSize: 15, color: "var(--foreground)", lineHeight: 1.1,
+                }}>
+                  {title}
+                </div>
+                {/* Breadcrumb */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  {segments.map((seg, i) => (
+                    <span key={seg} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: i === segments.length - 1 ? 700 : 500,
+                        color: i === segments.length - 1 ? meta.accent : "var(--muted-foreground)",
+                        textTransform: "capitalize",
+                      }}>
+                        {seg.replace(/-/g, " ")}
+                      </span>
+                      {i < segments.length - 1 && (
+                        <ChevronRight style={{ width: 10, height: 10, color: "var(--muted-foreground)", opacity: 0.5 }} />
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Right side — TSID logo + gov branding */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <img src={ASSETS.logo} alt="TSID" style={{ width: 30, height: 30, objectFit: "contain", opacity: 0.85 }} />
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: isDark ? "#94a3b8" : "#003366", letterSpacing: 0.3 }}>TSID</div>
-                <div style={{ fontSize: 9, color: "#1EB53A", fontWeight: 700, letterSpacing: 0.5 }}>WIZARA YA ELIMU</div>
+            {/* Right: role badge + user + TSID logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+
+              {/* Role badge */}
+              <div style={{
+                padding: "3px 10px", borderRadius: 20,
+                background: `${meta.accent}18`,
+                border: `1px solid ${meta.accent}44`,
+                fontSize: 9.5, fontWeight: 800,
+                color: meta.accent, letterSpacing: 0.8,
+                textTransform: "uppercase",
+              }}>
+                {meta.badge}
+              </div>
+
+              {/* User info */}
+              {!me.loading && me.email && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.1 }}>
+                      {me.fullName ?? me.email?.split("@")[0]}
+                    </div>
+                    <div style={{ fontSize: 9.5, color: "var(--muted-foreground)", marginTop: 1 }}>
+                      {me.email}
+                    </div>
+                  </div>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%",
+                    background: `linear-gradient(135deg, ${meta.accent}, #003366)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontWeight: 900, fontSize: 14, color: "#fff", flexShrink: 0,
+                    border: "2px solid var(--border)",
+                  }}>
+                    {(me.fullName ?? me.email).charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              )}
+
+              {/* TSID logo */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                paddingLeft: 14, borderLeft: "1px solid var(--border)",
+              }}>
+                <img src={ASSETS.logo} alt="TSID" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: "#003366", letterSpacing: 0.3 }}>TSID</div>
+                  <div style={{ fontSize: 8, color: "#1EB53A", fontWeight: 700, letterSpacing: 0.5 }}>WIZARA YA ELIMU</div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Page content */}
-          <div style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "30px 28px 60px", boxSizing: "border-box" }}>
+          <div style={{ flex: 1, maxWidth: 1140, width: "100%", margin: "0 auto", padding: "28px 28px 60px", boxSizing: "border-box" }}>
             <Outlet />
           </div>
         </main>
