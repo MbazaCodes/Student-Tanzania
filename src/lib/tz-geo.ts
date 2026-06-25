@@ -41,3 +41,38 @@ export const TZ_DISTRICTS: Record<string, string[]> = {
   "Unguja South": ["Kusini","Kati"],
   "Zanzibar": ["Mjini","Magharibi A","Magharibi B"],
 };
+
+// ── Student levels per school type ─────────────────────────────────────────
+export const LEVELS_BY_SCHOOL_TYPE: Record<string, string[]> = {
+  "Pre-School / Nursery": [
+    "Baby Class", "Middle Class", "Pre-Unit (Reception)",
+  ],
+  "Primary School": [
+    "Standard 1", "Standard 2", "Standard 3", "Standard 4",
+    "Standard 5", "Standard 6", "Standard 7",
+  ],
+  "Secondary School": [
+    "Form 1", "Form 2", "Form 3", "Form 4",
+    "Form 5", "Form 6",
+  ],
+  "University / College": [
+    "Certificate", "Diploma",
+    "Year 1", "Year 2", "Year 3", "Year 4", "Year 5",
+    "Postgraduate",
+  ],
+  "Vocational Training": [
+    "Level 1", "Level 2", "Level 3",
+    "NTA Level 4", "NTA Level 5", "NTA Level 6",
+  ],
+  "Special Needs School": [
+    "Pre-Unit", "Standard 1", "Standard 2", "Standard 3", "Standard 4",
+    "Standard 5", "Standard 6", "Standard 7",
+    "Form 1", "Form 2", "Form 3", "Form 4",
+  ],
+};
+
+/** Get the level options for a given school type (falls back to Primary). */
+export function levelsForSchoolType(type: string | null | undefined): string[] {
+  if (!type) return LEVELS_BY_SCHOOL_TYPE["Primary School"];
+  return LEVELS_BY_SCHOOL_TYPE[type] ?? LEVELS_BY_SCHOOL_TYPE["Primary School"];
+}

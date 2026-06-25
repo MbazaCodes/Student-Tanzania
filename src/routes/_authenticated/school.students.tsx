@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { levelsForSchoolType } from "@/lib/tz-geo";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,6 +170,10 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
 
   return (
     <form onSubmit={submit} className="space-y-4 py-2">
+      <div className="rounded-lg bg-primary/5 border border-primary/15 px-3 py-2 text-xs flex items-center gap-2">
+        <span className="font-semibold text-primary">{school.type}</span>
+        <span className="text-muted-foreground">— levels adjust to this institution type</span>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>TSID</Label><Input value={tsid} readOnly className="font-mono text-primary font-bold bg-muted/50" /></div>
         <div className="space-y-1.5"><Label>Full Name *</Label><Input value={fullname} onChange={(e) => setFullname(e.target.value)} required /></div>
@@ -186,7 +191,19 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
             <SelectContent>{BLOOD_GROUPS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>Current Level *</Label><Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Form 2" required /></div>
+        <div className="space-y-1.5">
+          <Label>Current Level *</Label>
+          <Select value={level} onValueChange={setLevel}>
+            <SelectTrigger>
+              <SelectValue placeholder={`Select level (${school.type})`} />
+            </SelectTrigger>
+            <SelectContent>
+              {levelsForSchoolType(school.type).map((lv) => (
+                <SelectItem key={lv} value={lv}>{lv}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5"><Label>Enrollment Date</Label><Input type="date" value={enrollmentDate} onChange={(e) => setEnrollmentDate(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Issue Date</Label><Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Parent / Guardian</Label><Input value={parentName} onChange={(e) => setParentName(e.target.value)} /></div>
