@@ -172,9 +172,9 @@ export function PortalShell({ title, subtitle, items }: {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--background)" }}>
 
       {/* Mobile top bar */}
-      <div className="md:hidden" style={{
+      <div className="portal-mobile-bar" style={{
         background: sidebarBg, color: sidebarText,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        alignItems: "center", justifyContent: "space-between",
         padding: "0 16px", height: 56, flexShrink: 0, position: "relative",
       }}>
         <div className="tz-flag-stripe" style={{ position: "absolute", top: 0, left: 0, right: 0 }} />
@@ -197,7 +197,7 @@ export function PortalShell({ title, subtitle, items }: {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="md:hidden" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex" }}>
+        <div className="portal-mobile-drawer" style={{ position: "fixed", inset: 0, zIndex: 50 }}>
           <div style={{ width: 260, height: "100%", overflowY: "auto" }}>{sidebar}</div>
           <div style={{ flex: 1, background: "rgba(0,0,0,.5)" }} onClick={() => setMobileOpen(false)} />
         </div>
@@ -205,7 +205,7 @@ export function PortalShell({ title, subtitle, items }: {
 
       {/* Desktop layout */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <div className="hidden md:flex" style={{ height: "100vh", position: "sticky", top: 0 }}>{sidebar}</div>
+        <div className="portal-desktop-sidebar" style={{ height: "100vh", position: "sticky", top: 0 }}>{sidebar}</div>
 
         {/* Main content */}
         <main id="main-content" style={{ flex: 1, minWidth: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>

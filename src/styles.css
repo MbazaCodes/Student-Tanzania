@@ -274,3 +274,16 @@
 @media (max-width: 640px) {
   .tsid-container { padding-inline: 16px; }
 }
+
+/* ── Portal shell responsive layout ──────────────────────────────── */
+/* Desktop: sidebar visible, mobile bar + drawer hidden */
+.portal-desktop-sidebar { display: flex; }
+.portal-mobile-bar      { display: none; }
+.portal-mobile-drawer   { display: none; }
+
+/* Mobile: hide sidebar, show mobile bar */
+@media (max-width: 768px) {
+  .portal-desktop-sidebar { display: none !important; }
+  .portal-mobile-bar      { display: flex !important; }
+  .portal-mobile-drawer   { display: flex !important; }
+}
