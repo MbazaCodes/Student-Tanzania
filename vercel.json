@@ -1,21 +1,15 @@
-{
-  "builds": [
-    {
-      "src": "dist/server/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "runtime": "nodejs@20.x"
-      }
-    }
-  ],
+﻿{
+  "framework": null,
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": "dist/client",
   "routes": [
     {
-      "src": "/_assets/(.*)",
-      "dest": "/dist/client/_assets/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/server/index.js"
+      "dest": "/dist/server/server.js"
     }
   ]
 }
