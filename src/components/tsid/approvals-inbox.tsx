@@ -39,8 +39,16 @@ export function ApprovalsInbox({ level }: { level: "admin" | "school" }) {
 
   async function review(cr: CR, decision: "approved" | "rejected") {
     if (decision === "approved") {
-      const { error: applyErr } = await applyChangeRequest(cr);
-      if (applyErr) { toast.error(`Apply failed: ${applyErr.message}`); return; }
+      // Delete requests → call edge function; edits → apply directly
+      if ((cr as any).request_type === "delete" && cr.entity === "student") {
+        const { data, error } = await supabase.functions.invoke("manage-admin", {
+          body: { action: "delete_student", tsid: cr.entity_ref },
+        });
+        if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Delete failed"); return; }
+      } else {
+        const { error: applyErr } = await applyChangeRequest(cr);
+        if (applyErr) { toast.error(`Apply failed: ${applyErr.message}`); return; }
+      }
     }
     const { error } = await supabase.from("change_requests").update({
       status: decision,

@@ -4,23 +4,21 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
-import { X, Pencil, Save, ShieldAlert } from "lucide-react";
+import { X, Pencil, Save, ShieldAlert, KeyRound, Trash2, Copy } from "lucide-react";
 import {
   diffFields, classifyStudentChanges, submitChangeRequest,
-  STUDENT_MAJOR_FIELDS, STUDENT_MINOR_FIELDS, fieldLabel,
+  STUDENT_MAJOR_FIELDS, STUDENT_MINOR_FIELDS,
 } from "@/lib/change-requests";
+import { studentCompleteness } from "@/lib/completeness";
+import { CompletenessBanner } from "@/components/tsid/completeness-banner";
+import { PhotoUpload } from "@/components/tsid/photo-upload";
+import { NATIONALITIES, RELATIONSHIPS, levelsForSchoolType } from "@/lib/tz-geo";
 
 type Student = Record<string, any>;
 
-/**
- * Slide-in student profile. View for all; edit routes changes through the
- * approval workflow:
- *   - viewerRole 'student'        → major→admin, minor→school
- *   - viewerRole 'school'         → can directly apply minor; major→admin
- *   - viewerRole 'admin'/'gov*'   → can apply anything directly
- */
 export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
   tsid: string;
   viewerRole: "student" | "school" | "admin";
@@ -34,50 +32,36 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
 
   const { data: student, isLoading, refetch } = useQuery({
     queryKey: ["student-profile", tsid],
-    queryFn: async () => {
-      const { data } = await supabase.from("students").select("*").eq("tsid", tsid).maybeSingle();
-      return data as Student | null;
-    },
+    queryFn: async () => (await supabase.from("students").select("*").eq("tsid", tsid).maybeSingle()).data as Student | null,
   });
 
   const isGovAdmin = me.tier === 0 || me.tier === 1 || me.tier === 2;
+  const isSchool = viewerRole === "school";
+  const completeness = studentCompleteness(student);
 
-  function startEdit() {
-    setDraft({ ...student });
-    setEditing(true);
-  }
+  function startEdit() { setDraft({ ...student }); setEditing(true); }
 
   async function save() {
     if (!student) return;
     setSaving(true);
+    const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo"];
+    const changes = diffFields(student, draft, editable);
+    if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
-    const editableFields = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS];
-    const changes = diffFields(student, draft, editableFields);
-    if (Object.keys(changes).length === 0) {
-      toast.message("No changes."); setSaving(false); setEditing(false); return;
-    }
-
-    // Gov admins apply directly
     if (isGovAdmin) {
       const updates: Record<string, unknown> = {};
       for (const [f, v] of Object.entries(changes)) updates[f] = v.new;
       const { error } = await supabase.from("students").update(updates).eq("tsid", tsid);
       if (error) { toast.error(error.message); setSaving(false); return; }
-      await supabase.from("activity_logs").insert({
-        action: "student:edit", message: `Edited ${tsid}`,
-        by_name: me.fullName ?? "Admin", by_role: me.role ?? "gov", by_ref: tsid,
-      });
-      toast.success("Saved");
-      setSaving(false); setEditing(false); refetch(); onChanged?.();
-      return;
+      await supabase.from("activity_logs").insert({ action: "student:edit", message: `Edited ${tsid}`, by_name: me.fullName ?? "Admin", by_role: me.role ?? "gov", by_ref: tsid });
+      toast.success("Saved"); setSaving(false); setEditing(false); refetch(); onChanged?.(); return;
     }
 
     const { major, minor } = classifyStudentChanges(changes);
     let submitted = 0;
 
-    // Minor: school applies directly if viewer is the school; otherwise request to school
     if (Object.keys(minor).length > 0) {
-      if (viewerRole === "school") {
+      if (isSchool) {
         const updates: Record<string, unknown> = {};
         for (const [f, v] of Object.entries(minor)) updates[f] = v.new;
         const { error } = await supabase.from("students").update(updates).eq("tsid", tsid);
@@ -86,50 +70,40 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
         await submitChangeRequest({
           entity: "student", entity_ref: tsid, entity_name: student.fullname,
           severity: "minor", approver_level: "school", changes: minor,
-          requested_by: me.userId!, requested_by_name: me.fullName ?? "Student",
-          requested_by_role: me.role ?? "student",
+          requested_by: me.userId!, requested_by_name: me.fullName ?? "Student", requested_by_role: me.role ?? "student",
           region: student.region, district: student.district, school_code: student.school_code,
         });
         submitted++;
       }
     }
-
-    // Major: always request → admin approval
     if (Object.keys(major).length > 0) {
       await submitChangeRequest({
         entity: "student", entity_ref: tsid, entity_name: student.fullname,
         severity: "major", approver_level: "admin", changes: major,
-        requested_by: me.userId!, requested_by_name: me.fullName ?? "Student",
-        requested_by_role: me.role ?? "student",
+        requested_by: me.userId!, requested_by_name: me.fullName ?? "Student", requested_by_role: me.role ?? "student",
         region: student.region, district: student.district, school_code: student.school_code,
       });
       submitted++;
     }
-
     setSaving(false); setEditing(false); refetch(); onChanged?.();
-    if (submitted > 0) toast.success("Change request submitted for approval");
-    else toast.success("Saved");
+    toast.success(submitted > 0 ? "Change request submitted for approval" : "Saved");
   }
 
-  const canEdit = viewerRole === "student" || viewerRole === "school" || isGovAdmin;
+  const canEdit = viewerRole === "student" || isSchool || isGovAdmin;
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", justifyContent: "flex-end" }}>
       <div style={{ flex: 1, background: "rgba(0,0,0,.4)" }} onClick={onClose} />
-      <div style={{ width: 460, maxWidth: "100%", background: "var(--card)", height: "100%", overflowY: "auto", boxShadow: "-8px 0 24px rgba(0,0,0,.15)" }}>
-        {/* Header */}
+      <div style={{ width: 480, maxWidth: "100%", background: "var(--card)", height: "100%", overflowY: "auto", boxShadow: "-8px 0 24px rgba(0,0,0,.15)" }}>
         <div style={{ position: "sticky", top: 0, background: "var(--card)", borderBottom: "1px solid var(--border)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 1 }}>
           <div className="font-bold text-primary" style={{ fontFamily: "var(--font-display)" }}>Student Profile</div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><X className="h-5 w-5" /></button>
         </div>
 
-        {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>
-        ) : !student ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">Not found.</div>
-        ) : (
+        {isLoading ? <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>
+        : !student ? <div className="p-8 text-center text-muted-foreground text-sm">Not found.</div>
+        : (
           <div className="p-5 space-y-4">
-            {/* Photo + name */}
             <div className="flex items-center gap-4">
               {student.photo
                 ? <img src={student.photo} className="w-16 h-20 object-cover rounded-lg border" alt="" />
@@ -141,17 +115,27 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
               </div>
             </div>
 
-            {!editing && canEdit && (
-              <Button variant="outline" className="w-full" onClick={startEdit}>
-                <Pencil className="h-3.5 w-3.5 mr-2" /> Edit profile
-              </Button>
+            {!editing && <CompletenessBanner result={completeness} entityLabel="student profile" onComplete={canEdit ? startEdit : undefined} />}
+
+            {!editing && (
+              <div className="space-y-2">
+                {canEdit && (
+                  <Button variant="outline" className="w-full" onClick={startEdit}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Edit profile
+                  </Button>
+                )}
+                {isSchool && (
+                  <div className="flex gap-2">
+                    <ResetStudentPassword tsid={tsid} />
+                    <RequestDeleteStudent student={student} me={me} onDone={onChanged} />
+                  </div>
+                )}
+              </div>
             )}
 
-            {editing ? (
-              <EditForm draft={draft} setDraft={setDraft} viewerRole={viewerRole} isGovAdmin={isGovAdmin} />
-            ) : (
-              <Details student={student} />
-            )}
+            {editing
+              ? <EditForm draft={draft} setDraft={setDraft} viewerRole={viewerRole} isGovAdmin={isGovAdmin} student={student} />
+              : <Details student={student} />}
 
             {editing && (
               <div className="flex gap-2 sticky bottom-0 bg-card pt-3 border-t">
@@ -182,25 +166,17 @@ function Details({ student }: { student: Student }) {
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between px-3 py-2 text-sm">
           <span className="text-muted-foreground">{k}</span>
-          <span className="font-medium text-right">{v || "—"}</span>
+          <span className="font-medium text-right">{v || <span className="text-red-500">— missing</span>}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function EditForm({ draft, setDraft, viewerRole, isGovAdmin }: {
-  draft: Student; setDraft: (s: Student) => void; viewerRole: string; isGovAdmin: boolean;
+function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
+  draft: Student; setDraft: (s: Student) => void; viewerRole: string; isGovAdmin: boolean; student: Student;
 }) {
   const set = (k: string, v: any) => setDraft({ ...draft, [k]: v });
-  const fields = [
-    { k: "fullname", label: "Full Name (major)", major: true },
-    { k: "dob", label: "Date of Birth (major)", major: true, type: "date" },
-    { k: "parent_name", label: "Parent / Guardian (minor)" },
-    { k: "parent_phone", label: "Parent Phone (minor)" },
-    { k: "parent_nida", label: "Parent NIDA (minor)" },
-    { k: "blood_group", label: "Blood Group (minor)" },
-  ];
   return (
     <div className="space-y-3">
       {!isGovAdmin && (
@@ -211,12 +187,93 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin }: {
             : "Major changes (name, DOB) need admin approval; minor changes apply immediately."}
         </div>
       )}
-      {fields.map((f) => (
-        <div key={f.k} className="space-y-1.5">
-          <Label>{f.label}</Label>
-          <Input type={f.type ?? "text"} value={draft[f.k] ?? ""} onChange={(e) => set(f.k, e.target.value)} />
-        </div>
-      ))}
+
+      <div className="space-y-1.5">
+        <Label>Profile Photo</Label>
+        <PhotoUpload currentUrl={draft.photo} pathPrefix={`students/${student.tsid}`} shape="portrait"
+          onUploaded={(url) => set("photo", url)} label="Upload photo" />
+      </div>
+
+      <div className="space-y-1.5"><Label>Full Name (major)</Label><Input value={draft.fullname ?? ""} onChange={(e) => set("fullname", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Date of Birth (major)</Label><Input type="date" value={draft.dob ?? ""} onChange={(e) => set("dob", e.target.value)} /></div>
+
+      <div className="space-y-1.5"><Label>Current Level</Label>
+        <Select value={draft.level ?? ""} onValueChange={(v) => set("level", v)}>
+          <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+          <SelectContent>{levelsForSchoolType(student.school_type ?? "Primary School").map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5"><Label>Nationality</Label>
+        <Select value={draft.nationality ?? ""} onValueChange={(v) => set("nationality", v)}>
+          <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+          <SelectContent>{NATIONALITIES.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5"><Label>Blood Group (minor)</Label><Input value={draft.blood_group ?? ""} onChange={(e) => set("blood_group", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Enrollment Date</Label><Input type="date" value={draft.enrollment_date ?? ""} onChange={(e) => set("enrollment_date", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Parent / Guardian (minor)</Label><Input value={draft.parent_name ?? ""} onChange={(e) => set("parent_name", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Relationship (minor)</Label>
+        <Select value={draft.relationship ?? ""} onValueChange={(v) => set("relationship", v)}>
+          <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+          <SelectContent>{RELATIONSHIPS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5"><Label>Parent Phone (minor)</Label><Input value={draft.parent_phone ?? ""} onChange={(e) => set("parent_phone", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Parent NIDA (minor)</Label><Input value={draft.parent_nida ?? ""} onChange={(e) => set("parent_nida", e.target.value)} /></div>
     </div>
+  );
+}
+
+function ResetStudentPassword({ tsid }: { tsid: string }) {
+  const [loading, setLoading] = useState(false);
+  const [pw] = useState(() => "tsid" + Math.random().toString(36).slice(2, 8));
+  const [done, setDone] = useState(false);
+  async function reset() {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("manage-admin", {
+      body: { action: "reset_student_password", tsid, new_password: pw },
+    });
+    setLoading(false);
+    if (error || data?.error) { toast.error(data?.error ?? error?.message ?? "Failed"); return; }
+    setDone(true); toast.success("Student password reset");
+  }
+  return (
+    <div className="flex-1">
+      {done ? (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2 text-xs flex items-center justify-between font-mono">
+          {pw}
+          <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(pw); toast.success("Copied"); }}><Copy className="h-3 w-3" /></Button>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" className="w-full" onClick={reset} disabled={loading}>
+          <KeyRound className="h-3.5 w-3.5 mr-1" /> {loading ? "…" : "Reset password"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function RequestDeleteStudent({ student, me, onDone }: { student: Student; me: any; onDone?: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function request() {
+    setLoading(true);
+    const { error } = await supabase.from("change_requests").insert({
+      entity: "student", entity_ref: student.tsid, entity_name: student.fullname,
+      severity: "major", approver_level: "admin", request_type: "delete",
+      changes: { _delete: { old: "active", new: "deleted" } },
+      requested_by: me.userId, requested_by_name: me.fullName ?? "School", requested_by_role: me.role ?? "school",
+      region: student.region, district: student.district, school_code: student.school_code, status: "pending",
+    });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Delete request sent for admin approval");
+    onDone?.();
+  }
+  return (
+    <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={request} disabled={loading}>
+      <Trash2 className="h-3.5 w-3.5 mr-1" /> {loading ? "…" : "Request delete"}
+    </Button>
   );
 }

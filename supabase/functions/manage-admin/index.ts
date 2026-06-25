@@ -14,10 +14,11 @@ const corsHeaders = {
 };
 
 interface Payload {
-  action: "reset_password" | "delete_admin" | "reset_school_password";
-  target_uid: string;       // auth uid for admin actions
+  action: "reset_password" | "delete_admin" | "reset_school_password" | "reset_student_password" | "delete_student";
+  target_uid?: string;
   new_password?: string;
-  school_code?: string;     // for reset_school_password
+  school_code?: string;
+  tsid?: string;            // for student actions
 }
 
 Deno.serve(async (req) => {
@@ -128,6 +129,49 @@ Deno.serve(async (req) => {
         action: "school:reset_password",
         message: `Reset password for school ${school.school_code} — ${school.school_name}`,
         by_name: caller.email ?? "Admin", by_role: callerAdmin.role, by_ref: school.school_code,
+      });
+      return json({ success: true });
+    }
+
+    if (action === "reset_student_password") {
+      if (!isGovTier && !isSchool) return json({ error: "Not permitted" }, 403);
+      if (!body.tsid) return json({ error: "Missing tsid" }, 400);
+      if (!new_password || new_password.length < 6) return json({ error: "Password too short" }, 400);
+
+      const { data: stu } = await admin.from("students")
+        .select("tsid, fullname, region, district, school_code, auth_uid").eq("tsid", body.tsid).maybeSingle();
+      if (!stu) return json({ error: "Student not found" }, 404);
+      if (!stu.auth_uid) return json({ error: "Student has no login account" }, 400);
+
+      // Scope checks
+      if (isSchool && callerAdmin.ref !== stu.school_code) return json({ error: "Out of school scope" }, 403);
+      if (isRegional && stu.region !== callerAdmin.region) return json({ error: "Out of region scope" }, 403);
+      if (isDistrict && stu.district !== callerAdmin.district) return json({ error: "Out of district scope" }, 403);
+
+      const { error } = await admin.auth.admin.updateUserById(stu.auth_uid, { password: new_password });
+      if (error) return json({ error: error.message }, 400);
+      await admin.from("activity_logs").insert({
+        action: "student:reset_password", message: `Reset password for ${stu.tsid} (${stu.fullname})`,
+        by_name: caller.email ?? "Admin", by_role: callerAdmin.role, by_ref: stu.tsid,
+      });
+      return json({ success: true });
+    }
+
+    if (action === "delete_student") {
+      // National only (used when approving a delete request)
+      if (!isNational) return json({ error: "Only National admins can delete students" }, 403);
+      if (!body.tsid) return json({ error: "Missing tsid" }, 400);
+      const { data: stu } = await admin.from("students").select("tsid, fullname, auth_uid").eq("tsid", body.tsid).maybeSingle();
+      if (!stu) return json({ error: "Student not found" }, 404);
+      await admin.from("students").delete().eq("tsid", body.tsid);
+      if (stu.auth_uid) {
+        await admin.from("admin_users").delete().eq("auth_uid", stu.auth_uid);
+        await admin.from("user_roles").delete().eq("user_id", stu.auth_uid);
+        await admin.auth.admin.deleteUser(stu.auth_uid);
+      }
+      await admin.from("activity_logs").insert({
+        action: "student:delete", message: `Deleted ${stu.tsid} (${stu.fullname})`,
+        by_name: caller.email ?? "Admin", by_role: callerAdmin.role, by_ref: stu.tsid,
       });
       return json({ success: true });
     }

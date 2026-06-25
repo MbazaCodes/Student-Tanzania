@@ -26,6 +26,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 018 | `018_students_name_compat.sql` | Make first_name/last_name nullable + auto-derive from fullname |
 | 019 | `019_student_auth_accounts.sql` | Add students.auth_uid (students log in with TSID + password) |
 | 020 | `020_change_requests.sql` | Change request / approval workflow table + RLS |
+| 021 | `021_storage_and_profile.sql` | profiles storage bucket + change_requests.request_type (delete requests) |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.
