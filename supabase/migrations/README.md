@@ -23,6 +23,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 015 | `015_school_auth_accounts.sql` | Add schools.auth_uid (schools now have real login accounts) |
 | 016 | `016_students_columns_complete.sql` | Ensure all student insert columns exist (region, district, ward, etc.) |
 | 017 | `017_students_rls_complete.sql` | Students+applications RLS: school insert/manage own, gov scoped, student read own |
+| 018 | `018_students_name_compat.sql` | Make first_name/last_name nullable + auto-derive from fullname |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.
