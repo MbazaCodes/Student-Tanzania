@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { useState } from "react";
 import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote } from "lucide-react";
-import { hashPassword } from "@/lib/tsid";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
 
@@ -331,7 +330,7 @@ function Page() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">School</th><th className="px-4 py-3">Region</th><th className="px-4 py-3">Username</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+              <tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">School</th><th className="px-4 py-3">Region</th><th className="px-4 py-3">Login</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
             </thead>
             <tbody>
               {schools.map((s) => (
@@ -409,20 +408,32 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
     if (!name || !region || !district || !ward || !code || !username || !password) {
       toast.error("Fill all required fields."); return;
     }
+    // username is the login email — must be a valid email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+      toast.error("Login email (Username) must be a valid email address."); return;
+    }
     setLoading(true);
-    const hash = await hashPassword(password);
-    const { error } = await supabase.from("schools").insert({
-      school_code: code, school_name: name, type, region, district, ward,
-      address: address || null,
-      phone: contact || null,
-      email: email || null,
-      cred_username: username, cred_password: hash, status: "active",
+
+    const { data, error } = await supabase.functions.invoke("create-school", {
+      body: {
+        school_code: code, school_name: name, type, region, district, ward,
+        address: address || null,
+        phone: contact || null,
+        email: username,        // login email
+        password,
+      },
     });
-    if (error) { toast.error(error.message); setLoading(false); return; }
-    await supabase.from("activity_logs").insert({
-      action: "school:create", message: `Registered school ${code} — ${name}`,
-      by_name: actorName, by_role: "gov", by_ref: code,
-    });
+
+    if (error) {
+      let msg = error.message;
+      try {
+        const ctx = (error as { context?: { body?: unknown } }).context;
+        if (ctx?.body) { const pr = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body; if (pr?.error) msg = pr.error; }
+      } catch { /* keep */ }
+      toast.error(msg); setLoading(false); return;
+    }
+    if (data?.error) { toast.error(data.error); setLoading(false); return; }
+
     setLoading(false);
     setIssued({ code, username, password });
     toast.success(`School ${code} registered!`);
@@ -435,11 +446,11 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
           <div className="font-bold text-emerald-800 text-sm mb-3">✅ Credentials</div>
           <div className="space-y-2 font-mono text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">School Code</span><strong className="text-primary">{issued.code}</strong></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Username</span><strong>{issued.username}</strong></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Login Email</span><strong>{issued.username}</strong></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Password</span><strong>{issued.password}</strong></div>
           </div>
           <Button className="mt-4 w-full" onClick={() => {
-            navigator.clipboard.writeText(`School Code: ${issued.code}\nUsername: ${issued.username}\nPassword: ${issued.password}`);
+            navigator.clipboard.writeText(`School Code: ${issued.code}\nLogin Email: ${issued.username}\nPassword: ${issued.password}`);
             toast.success("Credentials copied!");
           }}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
         </div>
@@ -521,8 +532,8 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
             <Input className="font-mono font-bold" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="MW1234" required />
           </div>
           <div className="space-y-1.5">
-            <Label>Username *</Label>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <Label>Login Email *</Label>
+            <Input type="email" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="school@tsid.go.tz" required />
           </div>
           <div className="space-y-1.5">
             <Label>Password *</Label>

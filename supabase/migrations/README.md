@@ -20,6 +20,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 012 | `012_fix_rls_recursion.sql` | **Critical:** fix admin_users RLS recursion (was returning empty everywhere) |
 | 013 | `013_management_notes.sql` | notes columns + National-only delete/update policies |
 | 014 | `014_audit_logs_policy.sql` | Allow trigger-driven inserts into audit_logs (fixes school create RLS error) |
+| 015 | `015_school_auth_accounts.sql` | Add schools.auth_uid (schools now have real login accounts) |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.
@@ -31,3 +32,4 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 |----------|---------|
 | `create-admin` | National/Regional create Regional/District admins (service-role, bypasses email validation) |
 | `manage-admin` | National-only reset-password + delete-admin (service-role) |
+| `create-school` | Register a school + create its login auth account (service-role, scope-enforced) |
