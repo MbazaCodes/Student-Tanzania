@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,16 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
   onChanged?: () => void;
 }) {
   const me = useCurrentUser();
+  const qc = useQueryClient();
+
+  // Refresh every view that shows this student's data (drawer, home, ID card).
+  function invalidateAll() {
+    refetch();
+    qc.invalidateQueries({ queryKey: ["student-profile", tsid] });
+    qc.invalidateQueries({ queryKey: ["my-student"] });
+    qc.invalidateQueries({ queryKey: ["my-id"] });
+    qc.invalidateQueries({ queryKey: ["students"] });
+  }
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Student>({});
   const [saving, setSaving] = useState(false);
@@ -54,7 +64,7 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
       const { error } = await supabase.from("students").update(updates).eq("tsid", tsid);
       if (error) { toast.error(error.message); setSaving(false); return; }
       await supabase.from("activity_logs").insert({ action: "student:edit", message: `Edited ${tsid}`, by_name: me.fullName ?? "Admin", by_role: me.role ?? "gov", by_ref: tsid });
-      toast.success("Saved"); setSaving(false); setEditing(false); refetch(); onChanged?.(); return;
+      toast.success("Saved"); setSaving(false); setEditing(false); invalidateAll(); onChanged?.(); return;
     }
 
     const { major, minor } = classifyStudentChanges(changes);
@@ -103,7 +113,7 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
       });
       submitted++;
     }
-    setSaving(false); setEditing(false); refetch(); onChanged?.();
+    setSaving(false); setEditing(false); invalidateAll(); onChanged?.();
     if (submitted > 0 && appliedDirect) toast.success("Photo saved · other changes sent for approval");
     else if (submitted > 0) toast.success("Change request submitted for approval");
     else toast.success("Saved");
