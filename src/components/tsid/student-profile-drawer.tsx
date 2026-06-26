@@ -59,7 +59,7 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
     setSaving(true);
     const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo",
       "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone", "start_level", "start_year",
-      "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6", "idx_college", "idx_university", "idx_vocational"];
+      "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6", "idx_college", "idx_university", "idx_vocational", "status"];
     const changes = diffFields(student, draft, editable);
     if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
@@ -267,6 +267,17 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
         <Select value={draft.level ?? ""} onValueChange={(v) => set("level", v)}>
           <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
           <SelectContent>{levelsForSchoolType(student.school_type ?? "Primary School").map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5"><Label>Enrollment Status</Label>
+        <Select value={draft.status ?? "active"} onValueChange={(v) => set("status", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {["active", "dropped", "suspended", "graduated", "transferred", "inactive"].map((s) => (
+              <SelectItem key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
 
