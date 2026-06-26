@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { ASSETS } from "@/lib/tsid";
 import {
-  DEV_CATEGORIES, type DevRecord, type CategoryDetail,
+  DEV_CATEGORIES, EXAM_INDEX_FIELDS, type DevRecord, type CategoryDetail,
   recordScore, scoreForRating, developmentProgress, requiredYears,
 } from "@/lib/development";
 
@@ -78,6 +78,23 @@ export function DevelopmentReport({ student, records, fieldwork = [] }: { studen
               <div style={{ fontWeight: 800, color: "#92400e" }}>★ TALENT</div>
               <div style={{ marginTop: 2 }}>{[student.talent_primary, student.talent_secondary].filter(Boolean).join(" · ")}</div>
               {student.talent_notes && <div style={{ color: "#555", marginTop: 2 }}>{student.talent_notes}</div>}
+            </div>
+          )}
+
+          {/* Exam / registration index numbers */}
+          {EXAM_INDEX_FIELDS.some((f) => student[f.key]) && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#002855", borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 8 }}>
+                EXAMINATION / REGISTRATION INDEX NUMBERS
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 24px", fontSize: 11.5 }}>
+                {EXAM_INDEX_FIELDS.filter((f) => student[f.key]).map((f) => (
+                  <div key={f.key} style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#555" }}>{f.label}</span>
+                    <span style={{ fontWeight: 700, fontFamily: "monospace" }}>{student[f.key]}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

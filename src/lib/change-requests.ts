@@ -10,6 +10,8 @@ export const STUDENT_MINOR_FIELDS = [
   "ethnicity", "religion", "disability", "health_condition",
   "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone",
   "start_level", "start_year",
+  "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6",
+  "idx_college", "idx_university", "idx_vocational",
 ];
 
 export type FieldChange = { old: unknown; new: unknown };

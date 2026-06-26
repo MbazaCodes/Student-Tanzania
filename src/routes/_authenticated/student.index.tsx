@@ -6,7 +6,7 @@ import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IdCard } from "@/components/tsid/id-card";
-import { requiredYears, developmentProgress, type DevRecord } from "@/lib/development";
+import { requiredYears, developmentProgress, EXAM_INDEX_FIELDS, type DevRecord } from "@/lib/development";
 
 export const Route = createFileRoute("/_authenticated/student/")({ component: Page });
 
@@ -145,6 +145,17 @@ function Page() {
               <InfoRow label="Emergency Phone" value={student.emergency_contact_phone ?? "—"} />
             </div>
           </div>
+
+          {EXAM_INDEX_FIELDS.some((f) => (student as any)[f.key]) && (
+            <div className="rounded-2xl border bg-card overflow-hidden md:col-span-2">
+              <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">🎓 Exam / Registration Index Numbers</div>
+              <div className="px-4 py-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                {EXAM_INDEX_FIELDS.filter((f) => (student as any)[f.key]).map((f) => (
+                  <InfoRow key={f.key} label={f.label} value={(student as any)[f.key]} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

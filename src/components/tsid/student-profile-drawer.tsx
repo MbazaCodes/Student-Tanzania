@@ -17,7 +17,7 @@ import { CompletenessBanner } from "@/components/tsid/completeness-banner";
 import { PhotoUpload } from "@/components/tsid/photo-upload";
 import { DevelopmentPanel } from "@/components/tsid/development-panel";
 import { FieldAttachmentPanel } from "@/components/tsid/field-attachment-panel";
-import { isTertiary } from "@/lib/development";
+import { isTertiary, EXAM_INDEX_FIELDS } from "@/lib/development";
 import { NATIONALITIES, RELATIONSHIPS, levelsForSchoolType } from "@/lib/tz-geo";
 
 type Student = Record<string, any>;
@@ -58,7 +58,8 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
     if (!student) return;
     setSaving(true);
     const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo",
-      "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone", "start_level", "start_year"];
+      "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone", "start_level", "start_year",
+      "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6", "idx_college", "idx_university", "idx_vocational"];
     const changes = diffFields(student, draft, editable);
     if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
@@ -307,6 +308,16 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5"><Label>Start Class</Label><Input value={draft.start_level ?? ""} onChange={(e) => set("start_level", e.target.value)} placeholder="e.g. Standard 1" /></div>
         <div className="space-y-1.5"><Label>Start Year</Label><Input type="number" value={draft.start_year ?? ""} onChange={(e) => set("start_year", e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 2023" /></div>
+      </div>
+
+      <div className="pt-2 mt-1 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exam / Registration Index Numbers</div>
+      <div className="grid grid-cols-2 gap-2">
+        {EXAM_INDEX_FIELDS.map((f) => (
+          <div key={f.key} className="space-y-1.5">
+            <Label className="text-xs">{f.label}</Label>
+            <Input value={(draft as any)[f.key] ?? ""} onChange={(e) => set(f.key as keyof Student, e.target.value as any)} />
+          </div>
+        ))}
       </div>
     </div>
   );

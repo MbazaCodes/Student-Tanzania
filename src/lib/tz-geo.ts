@@ -61,8 +61,9 @@ export const LEVELS_BY_SCHOOL_TYPE: Record<string, string[]> = {
     "Postgraduate",
   ],
   "Vocational Training": [
-    "Level 1", "Level 2", "Level 3",
+    "Basic / Level 1", "Level 2", "Level 3",
     "NTA Level 4", "NTA Level 5", "NTA Level 6",
+    "Trade Test III", "Trade Test II", "Trade Test I",
   ],
   "Special Needs School": [
     "Pre-Unit", "Standard 1", "Standard 2", "Standard 3", "Standard 4",

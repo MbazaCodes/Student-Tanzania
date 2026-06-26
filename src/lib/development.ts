@@ -46,6 +46,7 @@ export const LIFETIME_LADDER = [
   "Standard 1", "Standard 2", "Standard 3", "Standard 4", "Standard 5", "Standard 6", "Standard 7",
   "Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6",
   "Certificate", "Diploma",
+  "NTA Level 4", "NTA Level 5", "NTA Level 6",
   "University Year 1", "University Year 2", "University Year 3", "University Year 4", "University Year 5",
   "Postgraduate",
 ];
@@ -213,3 +214,16 @@ export function isTertiary(opts: { schoolType?: string | null; level?: string | 
   const lvl = (opts.level ?? "").toLowerCase();
   return /year\s*\d|certificate|diploma|nta level|postgraduate/.test(lvl);
 }
+
+// ── National exam / registration index numbers ─────────────────────────────
+export const EXAM_INDEX_FIELDS = [
+  { key: "idx_std4",       label: "Standard 4 Index (SFNA)" },
+  { key: "idx_std6",       label: "Standard 6 Index" },
+  { key: "idx_std7",       label: "Standard 7 Index (PSLE)" },
+  { key: "idx_form2",      label: "Form 2 Index (FTNA)" },
+  { key: "idx_form4",      label: "Form 4 Index (CSEE)" },
+  { key: "idx_form6",      label: "Form 6 Index (ACSEE)" },
+  { key: "idx_college",    label: "College Reg. No." },
+  { key: "idx_university", label: "University Reg. No." },
+  { key: "idx_vocational", label: "Vocational Reg. No. (VETA/NACTE)" },
+] as const;
