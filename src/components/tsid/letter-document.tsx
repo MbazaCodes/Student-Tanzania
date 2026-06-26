@@ -21,6 +21,9 @@ export type LetterData = {
   region?: string;
   district?: string;
   photo?: string | null;
+  signature?: string | null;
+  stamp?: string | null;
+  signed_by?: string | null;
 };
 
 /**
@@ -133,17 +136,27 @@ export function LetterDocument({ data }: { data: LetterData }) {
             <p>Kwa uthibitisho zaidi, tembelea: <strong>tsid.go.tz/verify</strong> ukitumia namba ya TSID.</p>
           </div>
 
-          {/* Signature + QR verification */}
-          <div style={{ marginTop: 48, fontSize: 12.5, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <div style={{ borderTop: "1px solid #002855", width: 220, paddingTop: 6 }}>
-              <strong>Mkuu wa Shule / Head of School</strong><br />
-              {data.school_name}
+          {/* Signature + stamp + QR verification */}
+          <div style={{ marginTop: 44, fontSize: 12.5, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16 }}>
+            <div>
+              {data.signature && (
+                <img src={data.signature} alt="signature" crossOrigin="anonymous"
+                  style={{ height: 54, objectFit: "contain", display: "block", marginBottom: 2 }} />
+              )}
+              <div style={{ borderTop: "1px solid #002855", width: 220, paddingTop: 6 }}>
+                <strong>{data.signed_by || "Mkuu wa Shule / Head of School"}</strong><br />
+                {data.school_name}
+              </div>
             </div>
+            {data.stamp && (
+              <img src={data.stamp} alt="stamp" crossOrigin="anonymous"
+                style={{ width: 96, height: 96, objectFit: "contain", opacity: 0.92 }} />
+            )}
             {qr && (
               <div style={{ textAlign: "center" }}>
-                <img src={qr} alt="QR" style={{ width: 92, height: 92 }} />
-                <div style={{ fontSize: 8.5, color: "#555", marginTop: 2, fontWeight: 600 }}>
-                  Scan to verify / Thibitisha
+                <img src={qr} alt="QR" style={{ width: 84, height: 84 }} />
+                <div style={{ fontSize: 8, color: "#555", marginTop: 2, fontWeight: 600 }}>
+                  Scan to verify
                 </div>
               </div>
             )}

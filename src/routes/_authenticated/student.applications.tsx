@@ -134,6 +134,9 @@ function Page() {
               region: viewLetter.region,
               district: viewLetter.district,
               photo: student.photo,
+              signature: viewLetter.signature,
+              stamp: viewLetter.stamp,
+              signed_by: viewLetter.signed_by,
             } as LetterData} />
           )}
         </DialogContent>
