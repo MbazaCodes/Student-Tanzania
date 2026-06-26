@@ -44,9 +44,17 @@ function Page() {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-primary text-primary-foreground p-6 flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <div className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>Karibu, {firstName}! 👋</div>
-          <div className="text-sm opacity-80 mt-1 font-mono">{student.tsid}</div>
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="h-20 w-20 rounded-2xl overflow-hidden bg-white/15 border-2 border-white/30 shrink-0 flex items-center justify-center">
+            {student.photo
+              ? <img src={student.photo} alt="" className="h-full w-full object-cover" />
+              : <span className="text-3xl">👤</span>}
+          </div>
+          <div className="min-w-0">
+            <div className="text-2xl font-bold truncate" style={{ fontFamily: "var(--font-display)" }}>Karibu, {firstName}! 👋</div>
+            <div className="text-sm opacity-90 truncate">{student.fullname}</div>
+            <div className="text-sm opacity-80 mt-0.5 font-mono">{student.tsid}</div>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setEditOpen(true)}>✏️ Edit Profile</Button>
@@ -101,6 +109,19 @@ function Page() {
               <InfoRow label="Name" value={student.parent_name ?? "—"} />
               <InfoRow label="Relationship" value={student.relationship ?? "—"} />
               <InfoRow label="Phone" value={student.parent_phone ?? "—"} />
+            </div>
+          </div>
+          <div className="rounded-2xl border bg-card overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm">🩺 Health & Personal Details</div>
+            <div className="px-4 py-2">
+              <InfoRow label="Ethnicity (Kabila)" value={student.ethnicity ?? "—"} />
+              <InfoRow label="Religion (Dini)" value={student.religion ?? "—"} />
+              <InfoRow label="Disability (Ulemavu)" value={student.disability ?? "None"} />
+              <InfoRow label="Health Condition" value={student.health_condition ?? "—"} />
+              <InfoRow label="Allergies (Mzio)" value={student.allergies ?? "—"} />
+              <InfoRow label="Home Address" value={student.home_address ?? "—"} />
+              <InfoRow label="Emergency Contact" value={student.emergency_contact_name ?? "—"} />
+              <InfoRow label="Emergency Phone" value={student.emergency_contact_phone ?? "—"} />
             </div>
           </div>
         </div>

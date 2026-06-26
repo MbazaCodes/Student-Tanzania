@@ -7,6 +7,8 @@ export const STUDENT_MAJOR_FIELDS = ["fullname", "dob", "tsid", "school_code"];
 export const STUDENT_MINOR_FIELDS = [
   "photo", "parent_phone", "address", "parent_name",
   "parent_nida", "relationship", "blood_group",
+  "ethnicity", "religion", "disability", "health_condition",
+  "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone",
 ];
 
 export type FieldChange = { old: unknown; new: unknown };

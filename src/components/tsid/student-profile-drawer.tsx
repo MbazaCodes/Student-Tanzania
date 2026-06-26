@@ -54,7 +54,8 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
   async function save() {
     if (!student) return;
     setSaving(true);
-    const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo"];
+    const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo",
+      "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone"];
     const changes = diffFields(student, draft, editable);
     if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
@@ -267,6 +268,26 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
       </div>
       <div className="space-y-1.5"><Label>Parent Phone (minor)</Label><Input value={draft.parent_phone ?? ""} onChange={(e) => set("parent_phone", e.target.value)} /></div>
       <div className="space-y-1.5"><Label>Parent NIDA (minor)</Label><Input value={draft.parent_nida ?? ""} onChange={(e) => set("parent_nida", e.target.value)} /></div>
+
+      <div className="pt-2 mt-1 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wider">Health & Personal</div>
+      <div className="space-y-1.5"><Label>Ethnicity / Kabila</Label><Input value={draft.ethnicity ?? ""} onChange={(e) => set("ethnicity", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Religion / Dini</Label><Input value={draft.religion ?? ""} onChange={(e) => set("religion", e.target.value)} /></div>
+      <div className="space-y-1.5">
+        <Label>Disability / Ulemavu</Label>
+        <Select value={draft.disability ?? ""} onValueChange={(v) => set("disability", v)}>
+          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectContent>
+            {["None", "Visual impairment", "Hearing impairment", "Physical disability", "Intellectual disability", "Albinism", "Multiple disabilities", "Other"].map((d) => (
+              <SelectItem key={d} value={d}>{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5"><Label>Health Condition</Label><Input value={draft.health_condition ?? ""} onChange={(e) => set("health_condition", e.target.value)} placeholder="e.g. Asthma, Diabetes, None" /></div>
+      <div className="space-y-1.5"><Label>Allergies / Mzio</Label><Input value={draft.allergies ?? ""} onChange={(e) => set("allergies", e.target.value)} placeholder="e.g. Penicillin, peanuts, None" /></div>
+      <div className="space-y-1.5"><Label>Home Address / Anuani</Label><Input value={draft.home_address ?? ""} onChange={(e) => set("home_address", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Emergency Contact Name</Label><Input value={draft.emergency_contact_name ?? ""} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
+      <div className="space-y-1.5"><Label>Emergency Contact Phone</Label><Input value={draft.emergency_contact_phone ?? ""} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
     </div>
   );
 }
