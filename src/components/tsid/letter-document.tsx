@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { ASSETS } from "@/lib/tsid";
@@ -28,6 +29,19 @@ export type LetterData = {
  */
 export function LetterDocument({ data }: { data: LetterData }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [qr, setQr] = useState("");
+
+  const verifyUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/search?id=${encodeURIComponent(data.tsid)}`
+    : `https://verify.tsid.go.tz/id/${data.tsid}`;
+
+  useEffect(() => {
+    QRCode.toDataURL(verifyUrl, {
+      margin: 1, width: 200,
+      color: { dark: "#002855", light: "#ffffff" },
+      errorCorrectionLevel: "M",
+    }).then(setQr).catch(() => setQr(""));
+  }, [verifyUrl]);
 
   async function download() {
     if (!ref.current) return;
@@ -119,12 +133,20 @@ export function LetterDocument({ data }: { data: LetterData }) {
             <p>Kwa uthibitisho zaidi, tembelea: <strong>tsid.go.tz/verify</strong> ukitumia namba ya TSID.</p>
           </div>
 
-          {/* Signature */}
-          <div style={{ marginTop: 48, fontSize: 12.5 }}>
+          {/* Signature + QR verification */}
+          <div style={{ marginTop: 48, fontSize: 12.5, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div style={{ borderTop: "1px solid #002855", width: 220, paddingTop: 6 }}>
               <strong>Mkuu wa Shule / Head of School</strong><br />
               {data.school_name}
             </div>
+            {qr && (
+              <div style={{ textAlign: "center" }}>
+                <img src={qr} alt="QR" style={{ width: 92, height: 92 }} />
+                <div style={{ fontSize: 8.5, color: "#555", marginTop: 2, fontWeight: 600 }}>
+                  Scan to verify / Thibitisha
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
