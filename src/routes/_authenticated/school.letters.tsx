@@ -109,27 +109,31 @@ function Page() {
                 <div className="text-sm mt-1">{l.purpose} <span className="text-xs text-muted-foreground">· {l.sector}</span></div>
                 {l.reason && <div className="text-xs text-muted-foreground mt-0.5">{l.reason}</div>}
                 {l.recipient_name && <div className="text-xs text-muted-foreground">To: {l.recipient_name}{l.district ? ` · ${l.district}, ${l.region}` : ""}</div>}
-                <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded font-bold"
-                  style={{ background: l.fee_type === "paid" ? "#fef3c7" : "#dcfce7", color: l.fee_type === "paid" ? "#92400e" : "#166534" }}>
-                  {l.fee_type === "paid" ? `PAID · TZS ${Number(l.amount).toLocaleString()}` : "FREE"}
-                </span>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold"
+                    style={{ background: "#fef3c7", color: "#92400e" }}>
+                    TZS {Number(l.amount || 2000).toLocaleString()}
+                  </span>
+                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold"
+                    style={{ background: l.paid ? "#dcfce7" : "#fee2e2", color: l.paid ? "#166534" : "#991b1b" }}>
+                    {l.paid ? "PAID ✓" : "UNPAID"}
+                  </span>
+                  {l.paid && l.service_number && (
+                    <span className="text-[10px] font-mono text-muted-foreground">#{l.service_number}</span>
+                  )}
+                </div>
                 {l.ref_no && <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{l.ref_no}</div>}
               </div>
               {filter === "pending" && (
                 <div className="flex flex-col gap-2 shrink-0">
-                  {l.fee_type === "paid" ? (
-                    <>
-                      <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => openApprove(l, true)}>
-                        <Check className="h-3.5 w-3.5 mr-1" /> Approve (paid)
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openApprove(l, false)}>
-                        Approve (unpaid)
-                      </Button>
-                    </>
-                  ) : (
-                    <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => openApprove(l, false)}>
-                      <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                  {l.paid ? (
+                    <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => openApprove(l, true)}>
+                      <Check className="h-3.5 w-3.5 mr-1" /> Sign & Approve
                     </Button>
+                  ) : (
+                    <span className="text-xs text-amber-600 font-semibold text-right max-w-[140px]">
+                      Awaiting student payment
+                    </span>
                   )}
                   <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => reject(l)}>
                     <X className="h-3.5 w-3.5 mr-1" /> Reject

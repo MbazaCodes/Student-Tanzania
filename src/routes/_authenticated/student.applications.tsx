@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, FileText, Clock, CheckCircle2, XCircle, Download } from "lucide-react";
+import { Plus, FileText, Clock, CheckCircle2, XCircle, Download, Smartphone, Receipt, Loader2 } from "lucide-react";
 import { TZ_REGIONS, TZ_DISTRICTS } from "@/lib/tz-geo";
 import {
   type Sector, purposesForSector, COMMON_REASONS, feeForPurpose,
+  LETTER_FEE, generateServiceNumber, generateReceiptNo,
 } from "@/lib/letter-requests";
 import { LetterDocument, type LetterData } from "@/components/tsid/letter-document";
+import { ReceiptDocument, type ReceiptData } from "@/components/tsid/receipt-document";
 
 export const Route = createFileRoute("/_authenticated/student/applications")({ component: Page });
 
@@ -23,6 +25,8 @@ function Page() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [viewLetter, setViewLetter] = useState<any | null>(null);
+  const [payLetter, setPayLetter] = useState<any | null>(null);
+  const [viewReceipt, setViewReceipt] = useState<any | null>(null);
 
   const { data: student } = useQuery({
     enabled: !!me.tsid,
@@ -98,15 +102,33 @@ function Page() {
                 {l.recipient_name && <div className="text-xs text-muted-foreground mt-0.5">To: {l.recipient_name}{l.district ? ` · ${l.district}, ${l.region}` : ""}</div>}
                 {l.ref_no && <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{l.ref_no}</div>}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 <StatusBadge status={l.status} />
-                {l.status === "approved" && (l.fee_type === "free" || l.paid) && (
-                  <Button size="sm" variant="outline" onClick={() => setViewLetter(l)}>
-                    <Download className="h-3.5 w-3.5 mr-1" /> Download
+
+                {/* Pay button — when unpaid */}
+                {!l.paid && (
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setPayLetter(l)}>
+                    <Smartphone className="h-3.5 w-3.5 mr-1" /> Pay TZS {Number(l.amount || 2000).toLocaleString()}
                   </Button>
                 )}
-                {l.status === "approved" && l.fee_type === "paid" && !l.paid && (
-                  <span className="text-xs text-amber-600 font-semibold">Payment required</span>
+
+                {/* Receipt — when paid */}
+                {l.paid && (
+                  <Button size="sm" variant="outline" onClick={() => setViewReceipt(l)}>
+                    <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
+                  </Button>
+                )}
+
+                {/* Letter — when approved AND paid */}
+                {l.status === "approved" && l.paid && (
+                  <Button size="sm" variant="outline" onClick={() => setViewLetter(l)}>
+                    <Download className="h-3.5 w-3.5 mr-1" /> Letter
+                  </Button>
+                )}
+
+                {/* Waiting note */}
+                {l.status === "pending" && l.paid && (
+                  <span className="text-xs text-muted-foreground">Paid · awaiting approval</span>
                 )}
               </div>
             </div>
@@ -141,6 +163,115 @@ function Page() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Payment dialog */}
+      <Dialog open={!!payLetter} onOpenChange={(o) => !o && setPayLetter(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Pay for Letter</DialogTitle></DialogHeader>
+          {payLetter && (
+            <PayForm
+              letter={payLetter}
+              onPaid={() => { setPayLetter(null); qc.invalidateQueries({ queryKey: ["my-letters"] }); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt dialog */}
+      <Dialog open={!!viewReceipt} onOpenChange={(o) => !o && setViewReceipt(null)}>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Payment Receipt</DialogTitle></DialogHeader>
+          {viewReceipt && (
+            <ReceiptDocument data={{
+              receipt_no: viewReceipt.receipt_no ?? "—",
+              service_number: viewReceipt.service_number ?? "—",
+              payment_ref: viewReceipt.payment_ref,
+              payment_method: viewReceipt.payment_method,
+              date: new Date(viewReceipt.paid_at ?? viewReceipt.created_at).toLocaleDateString("en-GB"),
+              student_name: viewReceipt.student_name,
+              tsid: viewReceipt.tsid,
+              school_name: viewReceipt.school_name,
+              purpose: viewReceipt.purpose,
+              amount: Number(viewReceipt.amount || 2000),
+            } as ReceiptData} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function PayForm({ letter, onPaid }: { letter: any; onPaid: () => void }) {
+  const [method, setMethod] = useState<"mobile" | "online">("mobile");
+  const [phone, setPhone] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const amount = Number(letter.amount || LETTER_FEE);
+
+  // Service number is generated once and shown so the student can pay by phone.
+  const [serviceNumber] = useState(() => letter.service_number || generateServiceNumber());
+
+  async function pay() {
+    if (method === "mobile" && phone.replace(/\D/g, "").length < 9) {
+      toast.error("Enter a valid phone number"); return;
+    }
+    setProcessing(true);
+    // SIMULATED payment — replace with real gateway later.
+    await new Promise((r) => setTimeout(r, 1800));
+    const payment_ref = `MOCK-${Date.now().toString().slice(-8)}`;
+    const receipt_no = generateReceiptNo();
+    const { error } = await supabase.from("letter_requests").update({
+      paid: true, fee_type: "paid", amount,
+      service_number: serviceNumber, payment_method: method,
+      payment_ref, receipt_no, paid_at: new Date().toISOString(),
+    }).eq("id", letter.id);
+    setProcessing(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Payment successful — receipt generated");
+    onPaid();
+  }
+
+  return (
+    <div className="space-y-4 py-1">
+      <div className="rounded-lg bg-muted/40 p-3 text-sm">
+        <div className="font-semibold">{letter.purpose}</div>
+        <div className="text-muted-foreground text-xs">{letter.student_name} · {letter.tsid}</div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Amount</span>
+          <span className="text-lg font-bold text-emerald-600">TZS {amount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Service / control number for phone payment */}
+      <div className="rounded-lg border border-dashed p-3 text-center">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Service / Control Number</div>
+        <div className="text-xl font-mono font-bold tracking-wider text-primary">{serviceNumber}</div>
+        <div className="text-[11px] text-muted-foreground mt-1">Use this number to pay via your mobile money (dial *150*...#)</div>
+      </div>
+
+      {/* Method */}
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => setMethod("mobile")}
+          className={`rounded-lg border p-3 text-sm font-semibold flex items-center justify-center gap-2 ${method === "mobile" ? "border-primary bg-primary/5 text-primary" : "text-muted-foreground"}`}>
+          <Smartphone className="h-4 w-4" /> Mobile
+        </button>
+        <button onClick={() => setMethod("online")}
+          className={`rounded-lg border p-3 text-sm font-semibold flex items-center justify-center gap-2 ${method === "online" ? "border-primary bg-primary/5 text-primary" : "text-muted-foreground"}`}>
+          <Receipt className="h-4 w-4" /> Online
+        </button>
+      </div>
+
+      {method === "mobile" && (
+        <div className="space-y-1.5">
+          <Label>Phone Number</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07XX XXX XXX" inputMode="tel" />
+          <p className="text-[11px] text-muted-foreground">You'll receive a USSD push to confirm. (Simulated for now.)</p>
+        </div>
+      )}
+
+      <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={pay} disabled={processing}>
+        {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing…</> : <>Pay TZS {amount.toLocaleString()}</>}
+      </Button>
+      <p className="text-[11px] text-center text-muted-foreground">Demo mode — payment is simulated and marked complete instantly.</p>
     </div>
   );
 }
@@ -219,9 +350,7 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
         </Select>
         {purpose && (
           <p className="text-xs text-muted-foreground">
-            {feeForPurpose(purpose).fee_type === "paid"
-              ? `This letter has a fee of TZS ${feeForPurpose(purpose).amount.toLocaleString()}.`
-              : "This letter is free."}
+            This letter has a fee of <strong>TZS {LETTER_FEE.toLocaleString()}</strong>, payable after submission.
           </p>
         )}
       </div>

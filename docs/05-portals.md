@@ -155,3 +155,26 @@ downloadable PDFs with TZ coat-of-arms letterhead.
 - Downloaded via html-to-image → jsPDF
 
 DB: `022_letter_requests.sql` (letter_requests table + scoped RLS).
+
+---
+
+## Letter Payment (added)
+
+Flat fee **2,000 TZS** per letter. Flow:
+student submits → **pays** (simulated mobile/online) → school sees **PAID** →
+school signs & approves → student downloads **letter PDF + receipt**.
+
+- Service/control number generated for phone payment reference.
+- Payment simulated (marked paid instantly, mock payment_ref). Real gateway TBD.
+- Receipt PDF includes fee distribution: School 50%, Service Fee 20%,
+  Wizara 10%, Other Education Support 20%.
+- School approval is gated on payment (cannot approve UNPAID letters).
+- Student gets two docs: Letter (TZID letterhead, photo, signature, stamp, QR)
+  and Receipt (distribution table).
+
+DB: migration 028 (fee defaults 2000, service_number, payment_method,
+payment_ref, paid_at, receipt_no; student-update RLS).
+
+SECURITY TODO: when wiring a real gateway, move the paid=true write into a
+service-role Edge Function (verify with gateway callback) so students can't
+self-mark paid. Current student-update RLS is for the simulated phase only.

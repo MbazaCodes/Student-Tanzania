@@ -31,20 +31,42 @@ export const COMMON_REASONS = [
   "Other (type below)",
 ];
 
-// Which purposes carry a fee (everything else is free).
-// Adjust as policy dictates.
-const PAID_PURPOSES = new Set<string>([
-  "NECTA Services",
-  "Government Grants & Loans (HESLB)",
-]);
+// Flat fee: every letter request costs 2,000 TZS.
+export const LETTER_FEE = 2000;
 
-export function feeForPurpose(purpose: string): { fee_type: "free" | "paid"; amount: number } {
-  if (PAID_PURPOSES.has(purpose)) return { fee_type: "paid", amount: 5000 };
-  return { fee_type: "free", amount: 0 };
+export function feeForPurpose(_purpose: string): { fee_type: "free" | "paid"; amount: number } {
+  return { fee_type: "paid", amount: LETTER_FEE };
+}
+
+// Fee distribution applied on the receipt.
+export const FEE_DISTRIBUTION = [
+  { key: "school",  label: "School",                  pct: 50 },
+  { key: "service", label: "Service Fee",             pct: 20 },
+  { key: "wizara",  label: "Wizara (Ministry)",       pct: 10 },
+  { key: "support", label: "Other Education Support",  pct: 20 },
+] as const;
+
+export function distributeFee(amount: number) {
+  return FEE_DISTRIBUTION.map((d) => ({
+    ...d,
+    value: Math.round((amount * d.pct) / 100),
+  }));
 }
 
 export function generateLetterRef(): string {
   const y = new Date().getFullYear();
   const n = Math.floor(100000 + Math.random() * 900000);
   return `TSID/LTR/${y}/${n}`;
+}
+
+// Payment control / service number the student uses to pay by phone.
+export function generateServiceNumber(): string {
+  const n = Math.floor(100000000 + Math.random() * 900000000); // 9-digit
+  return `99${n}`; // 11-digit control number
+}
+
+export function generateReceiptNo(): string {
+  const y = new Date().getFullYear();
+  const n = Math.floor(100000 + Math.random() * 900000);
+  return `TSID/RCP/${y}/${n}`;
 }
