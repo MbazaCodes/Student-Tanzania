@@ -6,6 +6,7 @@ import { StudentProfileDrawer } from "@/components/tsid/student-profile-drawer";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { IdCard } from "@/components/tsid/id-card";
+import { requiredYears, developmentProgress, type DevRecord } from "@/lib/development";
 
 export const Route = createFileRoute("/_authenticated/student/")({ component: Page });
 
@@ -28,6 +29,12 @@ function Page() {
     queryFn: async () => (await supabase.from("students").select("*").eq("tsid", me.tsid!).maybeSingle()).data,
   });
 
+  const { data: devRecords = [] } = useQuery({
+    enabled: !!me.tsid,
+    queryKey: ["dev-records", me.tsid],
+    queryFn: async () => (await supabase.from("student_development").select("*").eq("tsid", me.tsid!)).data ?? [],
+  });
+
   if (me.loading) return null;
 
   if (!me.tsid || !student) {
@@ -40,6 +47,11 @@ function Page() {
   }
 
   const firstName = student.fullname.split(" ")[0];
+  const devYears = requiredYears({
+    startYear: student.start_year, startLevel: student.start_level,
+    currentLevel: student.level, schoolType: student.school_type, enrollmentDate: student.enrollment_date,
+  });
+  const devProgress = developmentProgress(devRecords as DevRecord[], devYears);
 
   return (
     <div className="space-y-6">
@@ -54,6 +66,12 @@ function Page() {
             <div className="text-2xl font-bold truncate" style={{ fontFamily: "var(--font-display)" }}>Karibu, {firstName}! 👋</div>
             <div className="text-sm opacity-90 truncate">{student.fullname}</div>
             <div className="text-sm opacity-80 mt-0.5 font-mono">{student.tsid}</div>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 max-w-[180px] h-2 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${devProgress.percent}%`, background: devProgress.complete ? "#4ade80" : "#fbbf24" }} />
+              </div>
+              <span className="text-xs font-bold">{devProgress.percent}% development</span>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">

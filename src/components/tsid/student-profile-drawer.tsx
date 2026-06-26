@@ -15,6 +15,7 @@ import {
 import { studentCompleteness } from "@/lib/completeness";
 import { CompletenessBanner } from "@/components/tsid/completeness-banner";
 import { PhotoUpload } from "@/components/tsid/photo-upload";
+import { DevelopmentPanel } from "@/components/tsid/development-panel";
 import { NATIONALITIES, RELATIONSHIPS, levelsForSchoolType } from "@/lib/tz-geo";
 
 type Student = Record<string, any>;
@@ -55,7 +56,7 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
     if (!student) return;
     setSaving(true);
     const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo",
-      "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone"];
+      "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone", "start_level", "start_year"];
     const changes = diffFields(student, draft, editable);
     if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
@@ -183,6 +184,13 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
               ? <EditForm draft={draft} setDraft={setDraft} viewerRole={viewerRole} isGovAdmin={isGovAdmin} student={student} />
               : <Details student={student} />}
 
+            {!editing && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">📈 Development & Remarks</div>
+                <DevelopmentPanel student={student} canEdit={isSchool || isGovAdmin} />
+              </div>
+            )}
+
             {editing && (
               <div className="flex gap-2 sticky bottom-0 bg-card pt-3 border-t">
                 <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
@@ -287,7 +295,11 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
       <div className="space-y-1.5"><Label>Allergies / Mzio</Label><Input value={draft.allergies ?? ""} onChange={(e) => set("allergies", e.target.value)} placeholder="e.g. Penicillin, peanuts, None" /></div>
       <div className="space-y-1.5"><Label>Home Address / Anuani</Label><Input value={draft.home_address ?? ""} onChange={(e) => set("home_address", e.target.value)} /></div>
       <div className="space-y-1.5"><Label>Emergency Contact Name</Label><Input value={draft.emergency_contact_name ?? ""} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
-      <div className="space-y-1.5"><Label>Emergency Contact Phone</Label><Input value={draft.emergency_contact_phone ?? ""} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
+      <div className="pt-2 mt-1 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wider">Development Tracking</div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5"><Label>Start Class</Label><Input value={draft.start_level ?? ""} onChange={(e) => set("start_level", e.target.value)} placeholder="e.g. Standard 1" /></div>
+        <div className="space-y-1.5"><Label>Start Year</Label><Input type="number" value={draft.start_year ?? ""} onChange={(e) => set("start_year", e.target.value ? Number(e.target.value) : null)} placeholder="e.g. 2023" /></div>
+      </div>
     </div>
   );
 }
