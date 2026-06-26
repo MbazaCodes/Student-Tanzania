@@ -131,9 +131,12 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
   const [relationship, setRelationship] = useState("");
   const [parentNida, setParentNida] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [alsoCreateParent, setAlsoCreateParent] = useState(false);
+  const [parentEmail, setParentEmail] = useState("");
+  const [parentPassword, setParentPassword] = useState(genStudentPassword());
   const [password, setPassword] = useState(genStudentPassword());
   const [loading, setLoading] = useState(false);
-  const [issued, setIssued] = useState<{ tsid: string; username: string; password: string } | null>(null);
+  const [issued, setIssued] = useState<{ tsid: string; username: string; password: string; parentEmail?: string; parentPassword?: string } | null>(null);
 
   const [tsid] = useState(() => generateTsidNo());
 
@@ -169,8 +172,21 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
     }
     if (data?.error) { toast.error(data.error); setLoading(false); return; }
 
+    // Optionally create + link a parent/guardian
+    if (alsoCreateParent && parentEmail.trim()) {
+      const { error: pErr } = await supabase.functions.invoke("create-parent", {
+        body: {
+          name: parentName || "Guardian", email: parentEmail.trim(), password: parentPassword,
+          phone: parentPhone || null, relationship: relationship || "Guardian",
+          children: [tsid], region: school.region, district: school.district,
+        },
+      });
+      if (pErr) toast.error("Student created, but parent link failed: " + pErr.message);
+      else toast.success("Parent account created & linked");
+    }
+
     setLoading(false);
-    setIssued({ tsid, username: tsid, password });
+    setIssued({ tsid, username: tsid, password, parentEmail: alsoCreateParent && parentEmail.trim() ? parentEmail.trim() : undefined, parentPassword: alsoCreateParent && parentEmail.trim() ? parentPassword : undefined });
     toast.success(`✅ Student ${tsid} created!`);
   }
 
@@ -189,6 +205,19 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
             toast.success("Copied!");
           }}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
         </div>
+        {issued.parentEmail && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-5">
+            <div className="font-bold text-amber-800 mb-3">👪 Parent / Guardian login</div>
+            <div className="space-y-2 font-mono text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><strong>{issued.parentEmail}</strong></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Password</span><strong>{issued.parentPassword}</strong></div>
+            </div>
+            <Button className="mt-4 w-full" variant="outline" onClick={() => {
+              navigator.clipboard.writeText(`Parent login\nEmail: ${issued.parentEmail}\nPassword: ${issued.parentPassword}`);
+              toast.success("Copied!");
+            }}><Copy className="h-4 w-4 mr-2" /> Copy parent login</Button>
+          </div>
+        )}
         <Button className="w-full bg-primary" onClick={onDone}>Done</Button>
       </div>
     );
@@ -246,6 +275,23 @@ function CreateStudentForm({ school, actorName, onDone }: { school: School; acto
         </div>
         <div className="space-y-1.5"><Label>Parent NIDA (20 digits)</Label><Input value={parentNida} onChange={(e) => setParentNida(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Parent Phone</Label><Input value={parentPhone} onChange={(e) => setParentPhone(e.target.value)} placeholder="+255 7XX XXX XXX" /></div>
+      </div>
+
+      {/* Optional: create a Parent/Guardian login linked to this student */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={alsoCreateParent} onChange={(e) => setAlsoCreateParent(e.target.checked)} className="h-4 w-4" />
+          <span className="text-sm font-semibold text-amber-900">Also create a Parent / Guardian login for this student</span>
+        </label>
+        {alsoCreateParent && (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">The parent logs in with their email. If the email already exists, this child is added to that parent (siblings).</p>
+            <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-1"><Label className="text-xs">Parent Email *</Label><Input type="email" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="parent@email.com" /></div>
+              <div className="space-y-1"><Label className="text-xs">Parent Password</Label><Input value={parentPassword} onChange={(e) => setParentPassword(e.target.value)} /></div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="rounded-xl border bg-muted/30 p-4 text-sm">
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">School (auto)</div>
