@@ -382,6 +382,7 @@ function Page() {
 function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: () => void }) {
   const [name, setName]         = useState("");
   const [type, setType]         = useState<SchoolType>("Primary School");
+  const [category, setCategory] = useState<"normal" | "special" | "hardship">("normal");
   const [region, setRegion]     = useState("");
   const [district, setDistrict] = useState("");
   const [ward, setWard]         = useState("");
@@ -424,6 +425,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
     const { data, error } = await supabase.functions.invoke("create-school", {
       body: {
         school_code: code, school_name: name, type, region, district, ward,
+        category, fee_exempt: category !== "normal",
         address: address || null,
         phone: contact || null,
         email: username,        // login email
@@ -479,6 +481,24 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
               {SCHOOL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Fee-exemption category */}
+        <div className="col-span-2 space-y-1.5">
+          <Label>School Category *</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="normal">Shule ya Kawaida / Normal School</SelectItem>
+              <SelectItem value="special">Shule Maalum / Special School (free services)</SelectItem>
+              <SelectItem value="hardship">Shule ya Mazingira Magumu / Hardship Environment (free services)</SelectItem>
+            </SelectContent>
+          </Select>
+          {category !== "normal" && (
+            <p className="text-xs text-emerald-600 font-medium">
+              ✓ All students in this school will receive free letter services.
+            </p>
+          )}
         </div>
 
         {/* School Name */}

@@ -24,6 +24,8 @@ interface Payload {
   phone?: string | null;
   email: string;        // login email for the school account
   password: string;     // temp password
+  category?: string;        // 'normal' | 'special' | 'hardship'
+  fee_exempt?: boolean;     // special/hardship schools → free services
 }
 
 Deno.serve(async (req) => {
@@ -94,6 +96,8 @@ Deno.serve(async (req) => {
       phone: p.phone ?? null,
       email: p.email,
       cred_username: p.email,
+      category: p.category ?? "normal",
+      fee_exempt: p.fee_exempt ?? false,
       status: "active",
       auth_uid: schoolUid,
     });

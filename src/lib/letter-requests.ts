@@ -41,9 +41,12 @@ export function hasDisability(disability?: string | null): boolean {
   return v !== "" && v !== "none" && v !== "hakuna";
 }
 
-// Fee for a request, considering disability exemption.
-export function feeForStudent(disability?: string | null): { fee_type: "free" | "paid"; amount: number; exempt: boolean } {
-  if (hasDisability(disability)) return { fee_type: "free", amount: 0, exempt: true };
+// Fee for a request, considering disability AND school exemptions.
+// A student is exempt if they have a disability OR their school is fee-exempt
+// (shule maalum / mazingira magumu).
+export function feeForStudent(disability?: string | null, schoolExempt?: boolean | null): { fee_type: "free" | "paid"; amount: number; exempt: boolean; reason?: string } {
+  if (schoolExempt) return { fee_type: "free", amount: 0, exempt: true, reason: "school" };
+  if (hasDisability(disability)) return { fee_type: "free", amount: 0, exempt: true, reason: "disability" };
   return { fee_type: "paid", amount: LETTER_FEE, exempt: false };
 }
 

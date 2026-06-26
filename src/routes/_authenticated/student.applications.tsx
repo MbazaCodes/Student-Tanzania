@@ -31,7 +31,12 @@ function Page() {
   const { data: student } = useQuery({
     enabled: !!me.tsid,
     queryKey: ["my-student-min", me.tsid],
-    queryFn: async () => (await supabase.from("students").select("tsid,fullname,school_code,school_name,level,photo,disability").eq("tsid", me.tsid!).maybeSingle()).data,
+    queryFn: async () => {
+      const { data: s } = await supabase.from("students").select("tsid,fullname,school_code,school_name,level,photo,disability").eq("tsid", me.tsid!).maybeSingle();
+      if (!s) return null;
+      const { data: sch } = await supabase.from("schools").select("fee_exempt,category").eq("school_code", s.school_code).maybeSingle();
+      return { ...s, school_fee_exempt: sch?.fee_exempt ?? false, school_category: sch?.category ?? "normal" };
+    },
   });
 
   const { data: letters = [] } = useQuery({
@@ -310,7 +315,7 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
     const reason = isOtherReason ? reasonOther : reasonSel;
     if (!reason) { toast.error("Select or enter a reason."); return; }
     setLoading(true);
-    const fee = feeForStudent(student.disability);
+    const fee = feeForStudent(student.disability, student.school_fee_exempt);
     const { error } = await supabase.from("letter_requests").insert({
       tsid: student.tsid, student_name: student.fullname,
       school_code: student.school_code, school_name: student.school_name,
@@ -350,13 +355,16 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
           <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
           <SelectContent>{purposes.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
         </Select>
-        {purpose && (
-          <p className="text-xs text-muted-foreground">
-            {feeForStudent(student.disability).exempt
-              ? <><strong className="text-emerald-600">Free</strong> — exempted (student with disability / mwanafunzi mwenye ulemavu).</>
-              : <>This letter has a fee of <strong>TZS {LETTER_FEE.toLocaleString()}</strong>, payable after submission.</>}
-          </p>
-        )}
+        {purpose && (() => {
+          const f = feeForStudent(student.disability, student.school_fee_exempt);
+          return (
+            <p className="text-xs text-muted-foreground">
+              {f.exempt
+                ? <><strong className="text-emerald-600">Free</strong> — exempted ({f.reason === "school" ? "shule maalum / mazingira magumu" : "mwanafunzi mwenye ulemavu / student with disability"}).</>
+                : <>This letter has a fee of <strong>TZS {LETTER_FEE.toLocaleString()}</strong>, payable after submission.</>}
+            </p>
+          );
+        })()}
       </div>
 
       {/* Reason dropdown + Other */}
