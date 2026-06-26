@@ -21,6 +21,9 @@ function Page() {
     queryFn: async () => (await supabase.from("letter_requests")
       .select("*").eq("school_code", me.schoolCode!).eq("status", filter)
       .order("created_at", { ascending: false })).data ?? [],
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    refetchInterval: 30000,
   });
 
   async function review(l: any, decision: "approved" | "rejected", markPaid = false) {

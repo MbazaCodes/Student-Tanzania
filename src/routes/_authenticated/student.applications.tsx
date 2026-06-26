@@ -34,6 +34,9 @@ function Page() {
     enabled: !!me.tsid,
     queryKey: ["my-letters", me.tsid],
     queryFn: async () => (await supabase.from("letter_requests").select("*").eq("tsid", me.tsid!).order("created_at", { ascending: false })).data ?? [],
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    refetchInterval: 30000,
   });
 
   const pending = letters.filter((l: any) => l.status === "pending").length;
