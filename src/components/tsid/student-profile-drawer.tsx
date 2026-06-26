@@ -180,6 +180,9 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
                     )}
                   </div>
                 )}
+                {(isGovAdmin || isSchool) && (
+                  <MissingChildToggle student={student} actorName={me.fullName ?? (isSchool ? "School" : "Gov Admin")} actorRole={me.role ?? (isSchool ? "school" : "gov")} onDone={() => { refetch(); onChanged?.(); }} />
+                )}
               </div>
             )}
 
@@ -414,4 +417,83 @@ function ForceDeleteStudent({ student, onDone }: { student: Student; onDone: () 
       )}
     </>
   );
+}
+
+function MissingChildToggle({ student, actorName, actorRole, onDone }: { student: any; actorName: string; actorRole: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
+
+  const isGov = actorRole === "gov" || actorRole === "admin" || actorRole === "gov_region" || actorRole === "gov_district";
+  const isSchool = actorRole === "school";
+  const reported = !!student.missing_reported;
+  const active = !!student.missing;
+
+  async function update(updates: any, msg: string) {
+    setLoading(true);
+    const { error } = await supabase.from("students").update(updates).eq("tsid", student.tsid);
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(msg);
+    setShowNote(false); setNote("");
+    onDone();
+  }
+
+  // ── SCHOOL: report / withdraw report ──
+  if (isSchool) {
+    if (active) {
+      return <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">⚠ This student is publicly flagged MISSING (activated by the Ministry).</div>;
+    }
+    if (reported) {
+      return (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+          <div className="text-sm font-semibold text-amber-800">⏳ Missing report submitted — awaiting Ministry activation</div>
+          {student.missing_note && <div className="text-xs">{student.missing_note}</div>}
+          <Button size="sm" variant="outline" onClick={() => update({ missing_reported: false, missing_reported_by: null, missing_reported_at: null, missing_note: null }, "Report withdrawn")} disabled={loading}>Withdraw report</Button>
+        </div>
+      );
+    }
+    return !showNote ? (
+      <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 w-full" onClick={() => setShowNote(true)}>⚠ Report Missing Child</Button>
+    ) : (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+        <Label className="text-xs">Note (last seen, circumstances)</Label>
+        <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Details for the Ministry" />
+        <div className="flex gap-2">
+          <Button size="sm" variant="destructive" onClick={() => update({ missing_reported: true, missing_reported_by: actorName, missing_reported_at: new Date().toISOString(), missing_note: note || null }, "Reported to Ministry")} disabled={loading}>Submit Report</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowNote(false)}>Cancel</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── GOV ADMIN: activate / deactivate the public badge ──
+  if (isGov) {
+    if (active) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
+          <div className="text-sm font-semibold text-red-800">⚠ MISSING badge ACTIVE (public)</div>
+          {student.missing_since && <div className="text-xs text-red-700">Since {new Date(student.missing_since).toLocaleString()}{student.missing_by ? ` · by ${student.missing_by}` : ""}</div>}
+          {student.missing_note && <div className="text-xs">{student.missing_note}</div>}
+          <Button size="sm" variant="outline" onClick={() => update({ missing: false, missing_since: null, missing_by: null, missing_reported: false, missing_reported_by: null, missing_reported_at: null, missing_note: null }, "Found — badge cleared")} disabled={loading}>Mark Found / Clear</Button>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+        {reported ? (
+          <>
+            <div className="text-sm font-semibold text-amber-800">⏳ School reported this child missing</div>
+            <div className="text-xs">{student.missing_reported_by ? `By ${student.missing_reported_by}` : ""}{student.missing_reported_at ? ` · ${new Date(student.missing_reported_at).toLocaleString()}` : ""}</div>
+            {student.missing_note && <div className="text-xs">{student.missing_note}</div>}
+          </>
+        ) : <div className="text-xs text-muted-foreground">No school report. You may still activate directly.</div>}
+        <Button size="sm" variant="destructive" onClick={() => update({ missing: true, missing_since: new Date().toISOString(), missing_by: actorName, missing_note: student.missing_note ?? null }, "MISSING badge activated (public)")} disabled={loading}>
+          ⚠ Activate Missing Badge (public)
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
 }

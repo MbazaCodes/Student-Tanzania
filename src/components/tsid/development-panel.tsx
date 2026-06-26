@@ -15,6 +15,7 @@ import {
 
 export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: boolean }) {
   const qc = useQueryClient();
+  const me = useCurrentUser();
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -87,11 +88,49 @@ export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: 
               if (!confirm(`Delete ${r.year} ${r.term} record?`)) return;
               const { error } = await supabase.from("student_development").delete().eq("id", r.id);
               if (error) { toast.error(error.message); return; }
+              await supabase.from("development_audit").insert({
+                tsid: student.tsid, record_id: r.id, school_code: student.school_code,
+                action: "delete", year: r.year, term: r.term,
+                changes: r, actor_uid: me.userId, actor_name: me.fullName ?? "School", actor_role: me.role ?? "school",
+              });
               toast.success("Deleted");
               qc.invalidateQueries({ queryKey: ["dev-records", student.tsid] });
             }} />
         ))}
       </div>
+
+      {canEdit && <AuditTrail tsid={student.tsid} />}
+    </div>
+  );
+}
+
+function AuditTrail({ tsid }: { tsid: string }) {
+  const [open, setOpen] = useState(false);
+  const { data: logs = [] } = useQuery({
+    enabled: open,
+    queryKey: ["dev-audit", tsid],
+    queryFn: async () => (await supabase.from("development_audit").select("*").eq("tsid", tsid).order("created_at", { ascending: false }).limit(50)).data ?? [],
+  });
+  return (
+    <div className="rounded-xl border bg-card overflow-hidden">
+      <button onClick={() => setOpen((o) => !o)} className="w-full px-3 py-2 flex items-center justify-between text-xs font-semibold text-muted-foreground hover:bg-muted/30">
+        <span>🕓 Audit Trail (who changed what)</span>
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+      </button>
+      {open && (
+        <div className="divide-y max-h-60 overflow-y-auto">
+          {logs.length === 0 && <div className="px-3 py-3 text-xs text-muted-foreground text-center">No changes logged yet.</div>}
+          {logs.map((l: any) => (
+            <div key={l.id} className="px-3 py-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold capitalize" style={{ color: l.action === "delete" ? "#dc2626" : l.action === "create" ? "#16a34a" : "#d97706" }}>{l.action}</span>
+                <span className="text-muted-foreground">{new Date(l.created_at).toLocaleString()}</span>
+              </div>
+              <div className="text-muted-foreground">{l.year} {l.term} · by {l.actor_name} ({l.actor_role})</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -251,6 +290,12 @@ function DevForm({ student, existing, yearOptions, onDone, onCancel }: {
     }
     setSaving(false);
     if (error) { toast.error(error.message); return; }
+    // Append-only audit trail
+    await supabase.from("development_audit").insert({
+      tsid: student.tsid, record_id: existing?.id ?? null, school_code: student.school_code,
+      action: existing?.id ? "update" : "create", year, term,
+      changes: row, actor_uid: me.userId, actor_name: me.fullName ?? "School", actor_role: me.role ?? "school",
+    });
     toast.success("Saved");
     onDone();
   }

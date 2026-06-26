@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PortalShell } from "@/components/tsid/portal-shell";
 import { useTheme } from "@/lib/theme";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { LayoutDashboard, Users, Building2, ScrollText, ShieldCheck, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Users, Building2, ScrollText, ShieldCheck, CheckSquare, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/gov")({
   component: () => {
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/gov")({
 
     // Approvals (major student changes + school changes)
     items.push({ to: "/gov/approvals", label: "Approvals", icon: <CheckSquare className="h-4 w-4" /> });
+    items.push({ to: "/gov/missing", label: "Missing Children", icon: <AlertTriangle className="h-4 w-4" /> });
 
     // Audit logs for everyone in gov
     items.push({ to: "/gov/logs", label: t("nav_logs"), icon: <ScrollText className="h-4 w-4" /> });
