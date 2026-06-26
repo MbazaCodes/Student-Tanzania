@@ -29,6 +29,7 @@ Run these in the Supabase SQL Editor **in order**. All are idempotent
 | 021 | `021_storage_and_profile.sql` | profiles storage bucket + change_requests.request_type (delete requests) |
 | 022 | `022_letter_requests.sql` | Student letter request system (request → school approval → PDF) |
 | 023 | `023_student_self_update.sql` | Allow students to update their own record (own profile photo) |
+| 024 | `024_letter_requests_insert_fix.sql` | Fix letter_requests RLS insert (JWT fallback in my_tsid/my_school_code) |
 
 ## Notes
 - `007_superadmin_seed.sql` is the original (pre-existing-DB) version; prefer `007_superadmin_only.sql`.
