@@ -27,6 +27,17 @@ AS $$
   LIMIT 1;
 $$;
 
+-- Helper: any gov tier (defined first — used by missing_contacts below)
+CREATE OR REPLACE FUNCTION public.is_gov()
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_users
+    WHERE auth_uid = auth.uid() AND role IN ('gov','admin','gov_region','gov_district')
+  );
+$$;
+
 -- 3) Emergency contacts — ONLY for missing students, ONLY to gov admins.
 CREATE OR REPLACE FUNCTION public.missing_contacts(p_tsid TEXT)
 RETURNS TABLE (
@@ -43,17 +54,6 @@ AS $$
   WHERE upper(s.tsid) = upper(p_tsid)
     AND s.missing = true
     AND public.is_gov();   -- gov tiers only
-$$;
-
--- Helper: any gov tier
-CREATE OR REPLACE FUNCTION public.is_gov()
-RETURNS BOOLEAN
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.admin_users
-    WHERE auth_uid = auth.uid() AND role IN ('gov','admin','gov_region','gov_district')
-  );
 $$;
 
 -- Allow anon + authenticated to call the public verify; contacts gated inside.
