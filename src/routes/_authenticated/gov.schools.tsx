@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound, Upload } from "lucide-react";
+import { Plus, BadgeCheck, BadgeX, Copy, Pencil, Trash2, StickyNote, KeyRound, Upload, Heart } from "lucide-react";
 import { BulkUpload } from "@/components/tsid/bulk-upload";
 
 export const Route = createFileRoute("/_authenticated/gov/schools")({ component: Page });
@@ -282,7 +282,7 @@ function Page() {
 
   const { data: schools = [] } = useQuery({
     queryKey: ["gov-schools"],
-    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes,auth_uid,email").order("school_name")).data ?? [],
+    queryFn: async () => (await supabase.from("schools").select("school_code,school_name,type,region,district,ward,cred_username,status,notes,auth_uid,email,category,fee_exempt").order("school_name")).data ?? [],
   });
 
   async function toggleStatus(code: string, currentStatus: string) {
@@ -290,6 +290,16 @@ function Page() {
     const { error } = await supabase.from("schools").update({ status: next }).eq("school_code", code);
     if (error) toast.error(error.message);
     else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["gov-schools"] }); }
+  }
+
+  async function setSchoolCategory(code: string, category: "normal" | "special" | "hardship") {
+    const { error } = await supabase.from("schools")
+      .update({ category, fee_exempt: category !== "normal" }).eq("school_code", code);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(category === "normal" ? "Set to normal (fees apply)" : "Marked exempt — free services");
+      qc.invalidateQueries({ queryKey: ["gov-schools"] });
+    }
   }
 
   return (
@@ -343,6 +353,11 @@ function Page() {
                   <td className="px-4 py-3">
                     <div className="font-semibold">{s.school_name}</div>
                     <div className="text-xs text-muted-foreground">{s.type}</div>
+                    {s.fee_exempt && (
+                      <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: "#dbeafe", color: "#1e40af" }}>
+                        {s.category === "special" ? "SHULE MAALUM · FREE" : s.category === "hardship" ? "MAZINGIRA MAGUMU · FREE" : "EXEMPT · FREE"}
+                      </span>
+                    )}
                     {s.notes && <div className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1"><StickyNote className="h-3 w-3 mt-0.5 shrink-0" />{s.notes}</div>}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{s.region}{s.district ? ` · ${s.district}` : ""}</td>
@@ -359,6 +374,19 @@ function Page() {
                       </Button>
                       {/* Reset password — available to all gov admins (scope-enforced server-side) */}
                       <ResetSchoolPassword school={s} />
+                      {/* Category (exemption) — National only */}
+                      {me.tier === 0 && (
+                        <Select value={s.category ?? "normal"} onValueChange={(v) => setSchoolCategory(s.school_code, v as "normal" | "special" | "hardship")}>
+                          <SelectTrigger className="h-8 w-8 p-0 border-0 bg-transparent hover:bg-muted [&>svg:last-child]:hidden" title="Set fee category">
+                            <Heart className={`h-3.5 w-3.5 mx-auto ${s.fee_exempt ? "text-blue-600 fill-blue-600" : "text-muted-foreground"}`} />
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            <SelectItem value="normal">Normal (fees apply)</SelectItem>
+                            <SelectItem value="special">Shule Maalum (free)</SelectItem>
+                            <SelectItem value="hardship">Mazingira Magumu (free)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                       {/* Edit + delete — National only */}
                       {me.tier === 0 && (
                         <SchoolActions school={s} actorName={me.fullName ?? "Gov Admin"}

@@ -75,6 +75,20 @@ function Page() {
 
       {school && <CompletenessBanner result={completeness} entityLabel="school profile" onComplete={!editing ? startEdit : undefined} />}
 
+      {school?.fee_exempt && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-start gap-3">
+          <span className="text-xl">💙</span>
+          <div className="text-sm">
+            <div className="font-semibold text-blue-900">
+              {school.category === "special" ? "Shule Maalum" : school.category === "hardship" ? "Shule ya Mazingira Magumu" : "Exempt School"}
+            </div>
+            <div className="text-blue-700 text-xs mt-0.5">
+              This school is fee-exempt. All your students receive letter services for free. (Set by the Ministry.)
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border bg-card p-6 space-y-4">
         <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">School profile</div>
 
