@@ -72,6 +72,9 @@ function Page() {
               </div>
               <span className="text-xs font-bold">{devProgress.percent}% development</span>
             </div>
+            {student.talent_primary && (
+              <div className="text-xs opacity-90 mt-1.5">⭐ Talent: <strong>{student.talent_primary}</strong>{student.talent_secondary ? ` · ${student.talent_secondary}` : ""}</div>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

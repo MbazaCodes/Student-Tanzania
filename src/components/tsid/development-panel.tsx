@@ -7,14 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Check, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Check, Pencil, Trash2, ChevronDown, ChevronRight, Star } from "lucide-react";
 import {
-  DEV_CATEGORIES, DEV_TERMS, type DevRecord, type DevKey,
-  isRecordComplete, filledCount, requiredYears, developmentProgress,
+  DEV_CATEGORIES, DEV_TERMS, DEV_RATINGS, TALENT_AREAS, type DevRecord, type CategoryDetail,
+  isRecordComplete, filledCount, recordScore, scoreForRating, requiredYears, developmentProgress,
 } from "@/lib/development";
 
 export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: boolean }) {
-  const me = useCurrentUser();
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -34,6 +33,17 @@ export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: 
 
   return (
     <div className="space-y-3">
+      {/* Talent (lifetime, on the student record) */}
+      {canEdit ? <TalentEditor student={student} /> : (
+        (student.talent_primary || student.talent_secondary) && (
+          <div className="rounded-xl border bg-amber-50 border-amber-200 p-3">
+            <div className="flex items-center gap-1.5 text-amber-900 font-semibold text-sm"><Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Talent</div>
+            <div className="text-sm mt-1">{[student.talent_primary, student.talent_secondary].filter(Boolean).join(" · ")}</div>
+            {student.talent_notes && <div className="text-xs text-muted-foreground mt-0.5">{student.talent_notes}</div>}
+          </div>
+        )
+      )}
+
       {/* Progress summary */}
       <div className="rounded-xl border bg-card p-3">
         <div className="flex items-center justify-between text-sm">
@@ -43,32 +53,31 @@ export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: 
         <div className="h-2 rounded-full bg-muted mt-2 overflow-hidden">
           <div className="h-full rounded-full transition-all" style={{ width: `${progress.percent}%`, background: progress.complete ? "#16a34a" : "#f59e0b" }} />
         </div>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1.5">
+          <span>Avg development score: <strong>{progress.avgScore}%</strong></span>
+          <span>{progress.doneYears.length}/{years.length} years</span>
+        </div>
         {progress.missingYears.length > 0 && (
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            Missing / incomplete years: {progress.missingYears.join(", ")}
-          </div>
+          <div className="text-[11px] text-amber-600 mt-1">Missing/incomplete: {progress.missingYears.join(", ")}</div>
         )}
       </div>
 
-      {/* Add button (school/gov only) */}
       {canEdit && !adding && !editId && (
         <Button size="sm" variant="outline" className="w-full" onClick={() => setAdding(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add Development Record
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Yearly Record
         </Button>
       )}
 
-      {/* Add / edit form */}
       {canEdit && (adding || editId) && (
         <DevForm
           student={student}
-          existing={editId ? (records as DevRecord[]).find((r) => r.id === editId) : undefined}
-          requiredYears={years}
+          existing={editId ? (records as any[]).find((r) => r.id === editId) : undefined}
+          yearOptions={years}
           onDone={() => { setAdding(false); setEditId(null); qc.invalidateQueries({ queryKey: ["dev-records", student.tsid] }); }}
           onCancel={() => { setAdding(false); setEditId(null); }}
         />
       )}
 
-      {/* Records list (newest first for display) */}
       <div className="space-y-2">
         {records.length === 0 && <div className="text-xs text-muted-foreground text-center py-4">No development records yet.</div>}
         {[...records].reverse().map((r: any) => (
@@ -87,9 +96,60 @@ export function DevelopmentPanel({ student, canEdit }: { student: any; canEdit: 
   );
 }
 
+function TalentEditor({ student }: { student: any }) {
+  const qc = useQueryClient();
+  const [primary, setPrimary] = useState(student.talent_primary ?? "");
+  const [secondary, setSecondary] = useState(student.talent_secondary ?? "");
+  const [notes, setNotes] = useState(student.talent_notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    const { error } = await supabase.from("students")
+      .update({ talent_primary: primary || null, talent_secondary: secondary || null, talent_notes: notes || null })
+      .eq("tsid", student.tsid);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Talent saved");
+    qc.invalidateQueries({ queryKey: ["my-student"] });
+    qc.invalidateQueries({ queryKey: ["student-profile", student.tsid] });
+  }
+
+  return (
+    <div className="rounded-xl border bg-amber-50/50 border-amber-200 p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-amber-900 font-semibold text-sm"><Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Talent — what is this student best at?</div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Primary Talent</Label>
+          <Select value={primary} onValueChange={setPrimary}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{TALENT_AREAS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Secondary Talent</Label>
+          <Select value={secondary} onValueChange={setSecondary}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{TALENT_AREAS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">How it's being developed</Label>
+        <textarea className="w-full rounded-md border px-3 py-2 text-sm min-h-[48px] bg-background" value={notes}
+          onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Joined the school football team; recommended for district trials." />
+      </div>
+      <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={save} disabled={saving}>
+        <Check className="h-3.5 w-3.5 mr-1" /> {saving ? "Saving…" : "Save Talent"}
+      </Button>
+    </div>
+  );
+}
+
 function RecordCard({ rec, canEdit, onEdit, onDelete }: { rec: any; canEdit: boolean; onEdit: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
   const complete = isRecordComplete(rec);
+  const score = recordScore(rec);
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className="px-3 py-2 flex items-center justify-between gap-2 cursor-pointer hover:bg-muted/30" onClick={() => setOpen((o) => !o)}>
@@ -99,6 +159,7 @@ function RecordCard({ rec, canEdit, onEdit, onDelete }: { rec: any; canEdit: boo
           {rec.level && <span className="text-[11px] text-muted-foreground">{rec.level}</span>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {score > 0 && <span className="text-[11px] font-bold" style={{ color: score >= 75 ? "#16a34a" : score >= 50 ? "#d97706" : "#dc2626" }}>{score}%</span>}
           <span className="text-[10px] px-1.5 py-0.5 rounded font-bold"
             style={{ background: complete ? "#dcfce7" : "#fef3c7", color: complete ? "#166534" : "#92400e" }}>
             {complete ? "Complete" : `${filledCount(rec)}/6`}
@@ -112,51 +173,80 @@ function RecordCard({ rec, canEdit, onEdit, onDelete }: { rec: any; canEdit: boo
         </div>
       </div>
       {open && (
-        <div className="px-3 pb-3 pt-1 space-y-2 border-t">
-          {DEV_CATEGORIES.map((c) => (
-            <div key={c.key}>
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{c.label}</div>
-              <div className="text-sm">{rec[c.key]?.trim() ? rec[c.key] : <span className="text-muted-foreground italic">—</span>}</div>
+        <div className="px-3 pb-3 pt-1 space-y-2.5 border-t">
+          {DEV_CATEGORIES.map((c) => {
+            const d: CategoryDetail = rec[c.detail] ?? {};
+            return (
+              <div key={c.key}>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{c.label}</div>
+                  {d.rating && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#eef2ff", color: "#3730a3" }}>
+                      {d.rating} · {d.score ?? scoreForRating(d.rating)}%
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm">{d.comment?.trim() ? d.comment : <span className="text-muted-foreground italic">—</span>}</div>
+              </div>
+            );
+          })}
+          {rec.talent_area && (
+            <div className="pt-1 border-t">
+              <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1"><Star className="h-3 w-3" /> Talent</div>
+              <div className="text-sm">{rec.talent_area}{rec.talent_remark ? ` — ${rec.talent_remark}` : ""}</div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function DevForm({ student, existing, requiredYears: years, onDone, onCancel }: {
-  student: any; existing?: DevRecord; requiredYears: number[];
+function DevForm({ student, existing, yearOptions, onDone, onCancel }: {
+  student: any; existing?: any; yearOptions: number[];
   onDone: () => void; onCancel: () => void;
 }) {
   const me = useCurrentUser();
   const now = new Date().getFullYear();
-  const yearOptions = years.length ? years : [now];
-  const [year, setYear] = useState<number>(existing?.year ?? yearOptions[yearOptions.length - 1]);
+  const yrs = yearOptions.length ? yearOptions : [now];
+  const [year, setYear] = useState<number>(existing?.year ?? yrs[yrs.length - 1]);
   const [term, setTerm] = useState<string>(existing?.term ?? "Annual");
   const [level, setLevel] = useState<string>(existing?.level ?? student.level ?? "");
-  const [vals, setVals] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    DEV_CATEGORIES.forEach((c) => { init[c.key] = (existing?.[c.key as DevKey] as string) ?? ""; });
+  const [talentArea, setTalentArea] = useState<string>(existing?.talent_area ?? "");
+  const [talentRemark, setTalentRemark] = useState<string>(existing?.talent_remark ?? "");
+  const [details, setDetails] = useState<Record<string, CategoryDetail>>(() => {
+    const init: Record<string, CategoryDetail> = {};
+    DEV_CATEGORIES.forEach((c) => { init[c.key] = existing?.[c.detail] ?? {}; });
     return init;
   });
   const [saving, setSaving] = useState(false);
+
+  function setCat(key: string, patch: Partial<CategoryDetail>) {
+    setDetails((d) => ({ ...d, [key]: { ...d[key], ...patch } }));
+  }
 
   async function save() {
     setSaving(true);
     const row: any = {
       tsid: student.tsid, school_code: student.school_code,
       year, term, level: level || null,
+      talent_area: talentArea || null, talent_remark: talentRemark || null,
       created_by: me.userId, created_by_name: me.fullName ?? "School",
       updated_at: new Date().toISOString(),
     };
-    DEV_CATEGORIES.forEach((c) => { row[c.key] = vals[c.key]?.trim() || null; });
+    DEV_CATEGORIES.forEach((c) => {
+      const d = details[c.key] ?? {};
+      row[c.detail] = {
+        rating: d.rating ?? null,
+        score: d.rating ? (d.score ?? scoreForRating(d.rating)) : null,
+        comment: d.comment?.trim() || null,
+      };
+    });
 
     let error;
     if (existing?.id) {
       ({ error } = await supabase.from("student_development").update(row).eq("id", existing.id));
     } else {
-      // upsert on (tsid, year, term)
       ({ error } = await supabase.from("student_development").upsert(row, { onConflict: "tsid,year,term" }));
     }
     setSaving(false);
@@ -172,7 +262,7 @@ function DevForm({ student, existing, requiredYears: years, onDone, onCancel }: 
           <Label className="text-xs">Year</Label>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-            <SelectContent>{yearOptions.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+            <SelectContent>{yrs.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1">
@@ -188,17 +278,37 @@ function DevForm({ student, existing, requiredYears: years, onDone, onCancel }: 
         </div>
       </div>
 
-      {DEV_CATEGORIES.map((c) => (
-        <div key={c.key} className="space-y-1">
-          <Label className="text-xs">{c.label} *</Label>
-          <textarea
-            className="w-full rounded-md border px-3 py-2 text-sm min-h-[60px] bg-background"
-            value={vals[c.key]}
-            onChange={(e) => setVals((v) => ({ ...v, [c.key]: e.target.value }))}
-            placeholder={`Enter ${c.label.toLowerCase()}`}
-          />
-        </div>
-      ))}
+      {DEV_CATEGORIES.map((c) => {
+        const d = details[c.key] ?? {};
+        return (
+          <div key={c.key} className="rounded-lg border bg-background p-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs font-semibold">{c.label} *</Label>
+              <div className="flex items-center gap-1.5">
+                <Select value={d.rating ?? ""} onValueChange={(v) => setCat(c.key, { rating: v, score: scoreForRating(v) })}>
+                  <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue placeholder="Rating" /></SelectTrigger>
+                  <SelectContent>{DEV_RATINGS.map((r) => <SelectItem key={r.value} value={r.value}>{r.value} ({r.score}%)</SelectItem>)}</SelectContent>
+                </Select>
+                <Input type="number" min={0} max={100} className="h-7 w-16 text-xs" value={d.score ?? ""} placeholder="%"
+                  onChange={(e) => setCat(c.key, { score: e.target.value ? Number(e.target.value) : undefined })} />
+              </div>
+            </div>
+            <textarea className="w-full rounded-md border px-3 py-2 text-sm min-h-[54px] bg-background"
+              value={d.comment ?? ""} onChange={(e) => setCat(c.key, { comment: e.target.value })}
+              placeholder="Why this score & how to improve — e.g. 'Score 75%: student observed smoking. Needs to stop nicotine use and declare cessation.'" />
+          </div>
+        );
+      })}
+
+      {/* Talent for this record */}
+      <div className="rounded-lg border bg-amber-50/40 p-2.5 space-y-2">
+        <Label className="text-xs font-semibold flex items-center gap-1"><Star className="h-3 w-3" /> Talent identified this year</Label>
+        <Select value={talentArea} onValueChange={setTalentArea}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select talent" /></SelectTrigger>
+          <SelectContent>{TALENT_AREAS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+        </Select>
+        <Input className="h-8 text-xs" value={talentRemark} onChange={(e) => setTalentRemark(e.target.value)} placeholder="How it's nurtured / progress" />
+      </div>
 
       <div className="flex gap-2">
         <Button size="sm" className="flex-1 bg-primary" onClick={save} disabled={saving}>
@@ -206,7 +316,7 @@ function DevForm({ student, existing, requiredYears: years, onDone, onCancel }: 
         </Button>
         <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
       </div>
-      <p className="text-[11px] text-muted-foreground">Fill all 6 categories for this year to count toward 100% progress.</p>
+      <p className="text-[11px] text-muted-foreground">Give each category a rating + comment to mark the year complete (counts toward 100%).</p>
     </div>
   );
 }
