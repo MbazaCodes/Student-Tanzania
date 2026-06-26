@@ -110,24 +110,31 @@ function Page() {
                 {l.reason && <div className="text-xs text-muted-foreground mt-0.5">{l.reason}</div>}
                 {l.recipient_name && <div className="text-xs text-muted-foreground">To: {l.recipient_name}{l.district ? ` · ${l.district}, ${l.region}` : ""}</div>}
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold"
-                    style={{ background: "#fef3c7", color: "#92400e" }}>
-                    TZS {Number(l.amount || 2000).toLocaleString()}
-                  </span>
-                  <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold"
-                    style={{ background: l.paid ? "#dcfce7" : "#fee2e2", color: l.paid ? "#166534" : "#991b1b" }}>
-                    {l.paid ? "PAID ✓" : "UNPAID"}
-                  </span>
-                  {l.paid && l.service_number && (
-                    <span className="text-[10px] font-mono text-muted-foreground">#{l.service_number}</span>
+                  {l.fee_type === "free" ? (
+                    <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: "#dbeafe", color: "#1e40af" }}>
+                      FREE · EXEMPT (ulemavu)
+                    </span>
+                  ) : (
+                    <>
+                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold" style={{ background: "#fef3c7", color: "#92400e" }}>
+                        TZS {Number(l.amount || 2000).toLocaleString()}
+                      </span>
+                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-bold"
+                        style={{ background: l.paid ? "#dcfce7" : "#fee2e2", color: l.paid ? "#166534" : "#991b1b" }}>
+                        {l.paid ? "PAID ✓" : "UNPAID"}
+                      </span>
+                      {l.paid && l.service_number && (
+                        <span className="text-[10px] font-mono text-muted-foreground">#{l.service_number}</span>
+                      )}
+                    </>
                   )}
                 </div>
                 {l.ref_no && <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{l.ref_no}</div>}
               </div>
               {filter === "pending" && (
                 <div className="flex flex-col gap-2 shrink-0">
-                  {l.paid ? (
-                    <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => openApprove(l, true)}>
+                  {(l.paid || l.fee_type === "free") ? (
+                    <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => openApprove(l, l.fee_type === "paid")}>
                       <Check className="h-3.5 w-3.5 mr-1" /> Sign & Approve
                     </Button>
                   ) : (

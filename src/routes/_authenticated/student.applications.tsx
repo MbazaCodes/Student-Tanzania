@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Plus, FileText, Clock, CheckCircle2, XCircle, Download, Smartphone, Receipt, Loader2 } from "lucide-react";
 import { TZ_REGIONS, TZ_DISTRICTS } from "@/lib/tz-geo";
 import {
-  type Sector, purposesForSector, COMMON_REASONS, feeForPurpose,
+  type Sector, purposesForSector, COMMON_REASONS, feeForStudent,
   LETTER_FEE, generateServiceNumber, generateReceiptNo,
 } from "@/lib/letter-requests";
 import { LetterDocument, type LetterData } from "@/components/tsid/letter-document";
@@ -31,7 +31,7 @@ function Page() {
   const { data: student } = useQuery({
     enabled: !!me.tsid,
     queryKey: ["my-student-min", me.tsid],
-    queryFn: async () => (await supabase.from("students").select("tsid,fullname,school_code,school_name,level,photo").eq("tsid", me.tsid!).maybeSingle()).data,
+    queryFn: async () => (await supabase.from("students").select("tsid,fullname,school_code,school_name,level,photo,disability").eq("tsid", me.tsid!).maybeSingle()).data,
   });
 
   const { data: letters = [] } = useQuery({
@@ -95,7 +95,7 @@ function Page() {
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted capitalize">{l.sector}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded font-bold"
                     style={{ background: l.fee_type === "paid" ? "#fef3c7" : "#dcfce7", color: l.fee_type === "paid" ? "#92400e" : "#166534" }}>
-                    {l.fee_type === "paid" ? `PAID · TZS ${Number(l.amount).toLocaleString()}${l.paid ? " ✓" : " (unpaid)"}` : "FREE"}
+                    {l.fee_type === "paid" ? `TZS ${Number(l.amount).toLocaleString()}${l.paid ? " · PAID ✓" : " · UNPAID"}` : "FREE · EXEMPT"}
                   </span>
                 </div>
                 {l.reason && <div className="text-xs text-muted-foreground mt-1">{l.reason}</div>}
@@ -105,30 +105,30 @@ function Page() {
               <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 <StatusBadge status={l.status} />
 
-                {/* Pay button — when unpaid */}
-                {!l.paid && (
+                {/* Pay button — only for paid letters that aren't paid yet */}
+                {l.fee_type === "paid" && !l.paid && (
                   <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setPayLetter(l)}>
                     <Smartphone className="h-3.5 w-3.5 mr-1" /> Pay TZS {Number(l.amount || 2000).toLocaleString()}
                   </Button>
                 )}
 
-                {/* Receipt — when paid */}
-                {l.paid && (
+                {/* Receipt — only for paid (non-exempt) letters that were paid */}
+                {l.fee_type === "paid" && l.paid && (
                   <Button size="sm" variant="outline" onClick={() => setViewReceipt(l)}>
                     <Receipt className="h-3.5 w-3.5 mr-1" /> Receipt
                   </Button>
                 )}
 
-                {/* Letter — when approved AND paid */}
-                {l.status === "approved" && l.paid && (
+                {/* Letter — when approved (paid OR free-exempt) */}
+                {l.status === "approved" && (l.paid || l.fee_type === "free") && (
                   <Button size="sm" variant="outline" onClick={() => setViewLetter(l)}>
                     <Download className="h-3.5 w-3.5 mr-1" /> Letter
                   </Button>
                 )}
 
                 {/* Waiting note */}
-                {l.status === "pending" && l.paid && (
-                  <span className="text-xs text-muted-foreground">Paid · awaiting approval</span>
+                {l.status === "pending" && (l.paid || l.fee_type === "free") && (
+                  <span className="text-xs text-muted-foreground">{l.fee_type === "free" ? "Awaiting approval" : "Paid · awaiting approval"}</span>
                 )}
               </div>
             </div>
@@ -310,7 +310,7 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
     const reason = isOtherReason ? reasonOther : reasonSel;
     if (!reason) { toast.error("Select or enter a reason."); return; }
     setLoading(true);
-    const fee = feeForPurpose(purpose);
+    const fee = feeForStudent(student.disability);
     const { error } = await supabase.from("letter_requests").insert({
       tsid: student.tsid, student_name: student.fullname,
       school_code: student.school_code, school_name: student.school_name,
@@ -318,7 +318,9 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
       recipient_name: recipientName || null,
       recipient_address: recipientAddress || null,
       region: region || null, district: district || null,
-      fee_type: fee.fee_type, amount: fee.amount, paid: false,
+      fee_type: fee.fee_type, amount: fee.amount,
+      paid: fee.exempt,   // disability-exempt letters need no payment
+      paid_at: fee.exempt ? new Date().toISOString() : null,
       status: "pending",
     });
     if (error) { toast.error(error.message); setLoading(false); return; }
@@ -350,7 +352,9 @@ function RequestForm({ student, me, onDone }: { student: any; me: any; onDone: (
         </Select>
         {purpose && (
           <p className="text-xs text-muted-foreground">
-            This letter has a fee of <strong>TZS {LETTER_FEE.toLocaleString()}</strong>, payable after submission.
+            {feeForStudent(student.disability).exempt
+              ? <><strong className="text-emerald-600">Free</strong> — exempted (student with disability / mwanafunzi mwenye ulemavu).</>
+              : <>This letter has a fee of <strong>TZS {LETTER_FEE.toLocaleString()}</strong>, payable after submission.</>}
           </p>
         )}
       </div>
