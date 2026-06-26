@@ -59,7 +59,7 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
     setSaving(true);
     const editable = [...STUDENT_MAJOR_FIELDS, ...STUDENT_MINOR_FIELDS, "level", "gender", "nationality", "enrollment_date", "photo",
       "ethnicity", "religion", "disability", "health_condition", "allergies", "home_address", "emergency_contact_name", "emergency_contact_phone", "start_level", "start_year",
-      "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6", "idx_college", "idx_university", "idx_vocational", "status"];
+      "idx_std4", "idx_std6", "idx_std7", "idx_form2", "idx_form4", "idx_form6", "idx_college", "idx_university", "idx_vocational", "status", "nida", "birth_cert", "phone"];
     const changes = diffFields(student, draft, editable);
     if (Object.keys(changes).length === 0) { toast.message("No changes."); setSaving(false); setEditing(false); return; }
 
@@ -289,6 +289,12 @@ function EditForm({ draft, setDraft, viewerRole, isGovAdmin, student }: {
       </div>
 
       <div className="space-y-1.5"><Label>Blood Group (minor)</Label><Input value={draft.blood_group ?? ""} onChange={(e) => set("blood_group", e.target.value)} /></div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5"><Label>Student NIDA</Label><Input value={draft.nida ?? ""} onChange={(e) => set("nida", e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Birth Certificate No.</Label><Input value={draft.birth_cert ?? ""} onChange={(e) => set("birth_cert", e.target.value)} /></div>
+      </div>
+      <div className="space-y-1.5"><Label>Student Mobile</Label><Input value={draft.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="07XX XXX XXX" /></div>
       <div className="space-y-1.5"><Label>Enrollment Date</Label><Input type="date" value={draft.enrollment_date ?? ""} onChange={(e) => set("enrollment_date", e.target.value)} /></div>
       <div className="space-y-1.5"><Label>Parent / Guardian (minor)</Label><Input value={draft.parent_name ?? ""} onChange={(e) => set("parent_name", e.target.value)} /></div>
       <div className="space-y-1.5"><Label>Relationship (minor)</Label>

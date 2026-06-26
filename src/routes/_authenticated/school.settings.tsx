@@ -16,7 +16,7 @@ import { diffFields, submitChangeRequest } from "@/lib/change-requests";
 export const Route = createFileRoute("/_authenticated/school/settings")({ component: Page });
 
 // School edits → admin approval (a school profile change is significant)
-const SCHOOL_EDITABLE = ["school_name", "address", "phone", "email", "logo", "ward"];
+const SCHOOL_EDITABLE = ["school_name", "address", "phone", "email", "logo", "ward", "reg_number"];
 
 function Page() {
   const me = useCurrentUser();
@@ -104,6 +104,7 @@ function Page() {
             <div className="space-y-1.5"><Label>Address (needs approval)</Label><Input value={draft.address ?? ""} onChange={(e) => set("address", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Contact Phone (needs approval)</Label><Input value={draft.phone ?? ""} onChange={(e) => set("phone", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Contact Email (needs approval)</Label><Input type="email" value={draft.email ?? ""} onChange={(e) => set("email", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Registration Number (needs approval)</Label><Input value={draft.reg_number ?? ""} onChange={(e) => set("reg_number", e.target.value)} /></div>
             <div className="flex gap-2 pt-2 border-t">
               <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>Cancel</Button>
               <Button className="flex-1 bg-primary" onClick={save} disabled={saving}><Save className="h-3.5 w-3.5 mr-1" /> {saving ? "Saving…" : "Save"}</Button>

@@ -22,6 +22,7 @@ interface Payload {
   ward: string;
   address?: string | null;
   phone?: string | null;
+  reg_number?: string | null;
   email: string;        // login email for the school account
   password: string;     // temp password
   category?: string;        // 'normal' | 'special' | 'hardship'
@@ -94,6 +95,7 @@ Deno.serve(async (req) => {
       ward: p.ward,
       address: p.address ?? null,
       phone: p.phone ?? null,
+      reg_number: p.reg_number ?? null,
       email: p.email,
       cred_username: p.email,
       category: p.category ?? "normal",

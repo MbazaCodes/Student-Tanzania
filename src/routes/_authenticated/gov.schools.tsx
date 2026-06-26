@@ -416,6 +416,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
   const [ward, setWard]         = useState("");
   const [address, setAddress]   = useState("");
   const [contact, setContact]   = useState("");
+  const [regNumber, setRegNumber] = useState("");
   const [email, setEmail]       = useState("");
   const [code, setCode]         = useState("");
   const [username, setUsername] = useState("");
@@ -456,6 +457,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
         category, fee_exempt: category !== "normal",
         address: address || null,
         phone: contact || null,
+        reg_number: regNumber || null,
         email: username,        // login email
         password,
       },
@@ -575,6 +577,7 @@ function RegisterSchoolForm({ actorName, onDone }: { actorName: string; onDone: 
         {/* Address & Contact */}
         <div className="space-y-1.5"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
         <div className="space-y-1.5"><Label>Contact Phone</Label><Input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="+255 7XX XXX XXX" /></div>
+        <div className="space-y-1.5"><Label>Registration Number</Label><Input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="e.g. S.0001" /></div>
         <div className="col-span-2 space-y-1.5"><Label>Contact Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
       </div>
 
