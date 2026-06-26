@@ -11,6 +11,8 @@ import {
   isRecordComplete, recordScore, scoreForRating, requiredYears, developmentProgress,
 } from "@/lib/development";
 import { DevelopmentReport } from "@/components/tsid/development-report";
+import { FieldAttachmentPanel } from "@/components/tsid/field-attachment-panel";
+import { isTertiary } from "@/lib/development";
 
 export const Route = createFileRoute("/_authenticated/student/development")({ component: Page });
 
@@ -28,6 +30,12 @@ function Page() {
     enabled: !!me.tsid,
     queryKey: ["dev-records", me.tsid],
     queryFn: async () => (await supabase.from("student_development").select("*").eq("tsid", me.tsid!).order("year")).data ?? [],
+  });
+
+  const { data: fieldwork = [] } = useQuery({
+    enabled: !!me.tsid,
+    queryKey: ["field-attachments", me.tsid],
+    queryFn: async () => (await supabase.from("field_attachments").select("*").eq("tsid", me.tsid!).order("year", { ascending: false })).data ?? [],
   });
 
   if (me.loading || !student) return null;
@@ -84,6 +92,13 @@ function Page() {
         </div>
       </div>
 
+      {/* Field study / internship — tertiary only */}
+      {isTertiary({ schoolType: student.school_type, level: student.level }) && (
+        <div className="rounded-2xl border bg-card p-4">
+          <FieldAttachmentPanel student={student} canEdit={false} />
+        </div>
+      )}
+
       {/* Missing years note */}
       {progress.missingYears.length > 0 && (
         <p className="text-xs text-muted-foreground">Years still to be recorded by your school: {progress.missingYears.join(", ")}</p>
@@ -93,7 +108,7 @@ function Page() {
       <Dialog open={showReport} onOpenChange={setShowReport}>
         <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Development Report (CV)</DialogTitle></DialogHeader>
-          <DevelopmentReport student={student} records={records as DevRecord[]} />
+          <DevelopmentReport student={student} records={records as DevRecord[]} fieldwork={fieldwork} />
         </DialogContent>
       </Dialog>
     </div>

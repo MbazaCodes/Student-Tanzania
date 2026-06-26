@@ -9,7 +9,7 @@ import {
   recordScore, scoreForRating, developmentProgress, requiredYears,
 } from "@/lib/development";
 
-export function DevelopmentReport({ student, records }: { student: any; records: DevRecord[] }) {
+export function DevelopmentReport({ student, records, fieldwork = [] }: { student: any; records: DevRecord[]; fieldwork?: any[] }) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   const years = requiredYears({
@@ -115,6 +115,36 @@ export function DevelopmentReport({ student, records }: { student: any; records:
               );
             })}
           </div>
+
+          {/* Work experience / field attachments (CV style) */}
+          {fieldwork.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#002855", borderBottom: "1px solid #ccc", paddingBottom: 4, marginBottom: 10 }}>
+                WORK EXPERIENCE / FIELD ATTACHMENTS
+              </div>
+              {fieldwork.map((w: any, i) => (
+                <div key={i} style={{ marginBottom: 14, paddingLeft: 14, borderLeft: "3px solid #002855" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <div style={{ fontSize: 13, fontWeight: 800 }}>{w.job_title || w.attachment_type} — {w.institution}</div>
+                    {typeof w.score === "number" && w.score > 0 && <div style={{ fontSize: 12.5, fontWeight: 800, color: w.score >= 75 ? "#16a34a" : "#d97706" }}>{w.score}%</div>}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#555" }}>
+                    {w.sector === "government" ? "Government" : "Private"}{w.industry ? ` · ${w.industry}` : ""}
+                    {w.year ? ` · ${w.year}` : ""}{(w.region || w.district) ? ` · ${[w.district, w.region].filter(Boolean).join(", ")}` : ""}
+                  </div>
+                  {w.designation && <div style={{ fontSize: 11.5, marginTop: 2 }}><strong>Designation:</strong> {w.designation}</div>}
+                  {w.duties && <div style={{ fontSize: 11.5, marginTop: 2 }}><strong>Duties:</strong> {w.duties}</div>}
+                  {Array.isArray(w.kpis) && w.kpis.length > 0 && (
+                    <div style={{ fontSize: 11.5, marginTop: 2 }}>
+                      <strong>KPIs:</strong> {w.kpis.map((k: any) => `${k.name}${k.score != null ? ` (${k.score}%)` : ""}`).join("; ")}
+                    </div>
+                  )}
+                  {w.report_to_name && <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>Supervisor: {w.report_to_name}{w.report_to_email ? ` · ${w.report_to_email}` : ""}</div>}
+                  {w.remark && <div style={{ fontSize: 11.5, marginTop: 2, fontStyle: "italic" }}>{w.rating ? `${w.rating} — ` : ""}{w.remark}</div>}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Footer */}
           <div style={{ marginTop: 24, paddingTop: 12, borderTop: "1px solid #ddd", fontSize: 9, color: "#888", textAlign: "center" }}>

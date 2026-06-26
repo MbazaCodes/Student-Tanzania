@@ -165,3 +165,51 @@ export function developmentProgress(records: DevRecord[], years: number[]): {
   const avgScore = yearScores.length ? Math.round(yearScores.reduce((a, b) => a + b, 0) / yearScores.length) : 0;
   return { percent, complete: percent === 100, doneYears, missingYears, avgScore };
 }
+
+// ── Field attachment / internship (tertiary students) ──────────────────────
+
+export const ATTACHMENT_TYPES = [
+  "Internship", "Field Study", "Work-Study", "Practical Training", "Apprenticeship",
+] as const;
+
+export const INDUSTRY_SECTORS = [
+  "Health", "Education", "Finance & Banking", "Agriculture", "Manufacturing",
+  "ICT / Technology", "Construction", "Energy & Mining", "Transport & Logistics",
+  "Tourism & Hospitality", "Public Administration", "Legal", "Media & Communication",
+  "NGO / Development", "Trade & Commerce", "Other",
+] as const;
+
+export type KPI = { name: string; target?: string; achieved?: string; score?: number };
+
+export type FieldAttachment = {
+  id?: string;
+  tsid: string;
+  school_code: string;
+  year?: number | null;
+  attachment_type?: string | null;
+  sector: "government" | "private";
+  institution: string;
+  industry?: string | null;
+  job_title?: string | null;
+  designation?: string | null;
+  region?: string | null;
+  district?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  duties?: string | null;
+  report_to_name?: string | null;
+  report_to_phone?: string | null;
+  report_to_email?: string | null;
+  kpis?: KPI[];
+  remark?: string | null;
+  rating?: string | null;
+  score?: number | null;
+};
+
+// Tertiary = college / university / vocational (do field work while studying).
+export function isTertiary(opts: { schoolType?: string | null; level?: string | null }): boolean {
+  const t = (opts.schoolType ?? "").toLowerCase();
+  if (t.includes("university") || t.includes("college") || t.includes("vocational")) return true;
+  const lvl = (opts.level ?? "").toLowerCase();
+  return /year\s*\d|certificate|diploma|nta level|postgraduate/.test(lvl);
+}
