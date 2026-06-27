@@ -445,21 +445,29 @@ const Ctx = createContext<ThemeCtx>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() =>
-    (typeof window !== "undefined" && (localStorage.getItem("tsid:theme") as Theme)) || "light"
-  );
-  const [lang, setLang] = useState<Lang>(() =>
-    (typeof window !== "undefined" && (localStorage.getItem("tsid:lang") as Lang)) || "en"
-  );
+  // Always start from defaults so server and first client render match
+  // (prevents React #418 hydration mismatch). Stored prefs applied after mount.
+  const [theme, setTheme] = useState<Theme>("light");
+  const [lang, setLang] = useState<Lang>("en");
+  const [hydrated, setHydrated] = useState(false);
+
+  // After hydration, load saved preferences from localStorage.
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("tsid:theme") as Theme | null;
+    const savedLang = localStorage.getItem("tsid:lang") as Lang | null;
+    if (savedTheme) setTheme(savedTheme);
+    if (savedLang) setLang(savedLang);
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("tsid:theme", theme);
-  }, [theme]);
+    if (hydrated) localStorage.setItem("tsid:theme", theme);
+  }, [theme, hydrated]);
 
   useEffect(() => {
-    localStorage.setItem("tsid:lang", lang);
-  }, [lang]);
+    if (hydrated) localStorage.setItem("tsid:lang", lang);
+  }, [lang, hydrated]);
 
   const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
   const toggleLang  = () => setLang((l) => (l === "en" ? "sw" : "en"));

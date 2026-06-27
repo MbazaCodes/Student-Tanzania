@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, GraduationCap, Building2 } from "lucide-react";
 
 const searchSchema = z.object({ role: z.enum(["admin","gov","school","student"]).optional() });
-export const Route = createFileRoute("/auth")({ validateSearch: searchSchema, component: AuthPage });
+export const Route = createFileRoute("/auth")({ validateSearch: searchSchema, ssr: false, component: AuthPage });
 
 /** Per-role icon — coat of arms for gov, building for school, cap for student */
 function RoleIcon({ role, size = 22, active = false }: { role: Role; size?: number; active?: boolean }) {
@@ -46,10 +46,14 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   const ROLE_DEFS: Record<Role, { label: string; desc: string }> = {
-    admin:   { label: "Admin",          desc: "System administrator" },
-    gov:     { label: t("role_gov"),     desc: t("role_gov_desc") },
-    school:  { label: t("role_school"),  desc: t("role_school_desc") },
-    student: { label: t("role_student"), desc: t("role_student_desc") },
+    admin:        { label: "Admin",          desc: "System administrator" },
+    gov:          { label: t("role_gov"),     desc: t("role_gov_desc") },
+    gov_region:   { label: "Regional Admin",  desc: "Regional education office" },
+    gov_district: { label: "District Admin",  desc: "District education office" },
+    school:       { label: t("role_school"),  desc: t("role_school_desc") },
+    student:      { label: t("role_student"), desc: t("role_student_desc") },
+    parent:       { label: "Parent / Guardian", desc: "Parent or guardian" },
+    teacher:      { label: "Teacher / Educator", desc: "Teacher, instructor or dean" },
   };
 
   useEffect(() => {
@@ -114,7 +118,8 @@ function AuthPage() {
   }
 
   const roleColor: Record<Role, string> = {
-    admin: "#003366", gov: "#003366", school: "#1B8F3A", student: "#007AFF",
+    admin: "#003366", gov: "#003366", gov_region: "#003366", gov_district: "#003366",
+    school: "#1B8F3A", student: "#007AFF", parent: "#9333ea", teacher: "#ea580c",
   };
 
   return (
