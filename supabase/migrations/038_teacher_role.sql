@@ -42,8 +42,8 @@ RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
     FROM public.students s
     JOIN public.teacher_assignments ta
       ON ta.teacher_ref = public.my_teacher_ref()
-     AND ta.school_code = s.school_code
-     AND ta.level = s.level
+     AND lower(trim(ta.school_code)) = lower(trim(s.school_code))
+     AND lower(trim(ta.level)) = lower(trim(s.level))
     WHERE s.tsid = p_tsid
   );
 $$;
