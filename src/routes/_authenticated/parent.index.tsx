@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Users, GraduationCap, TrendingUp, Star } from "lucide-react";
+import { DocumentsPanel, PARENT_DOC_CATEGORIES } from "@/components/tsid/documents-panel";
 
 export const Route = createFileRoute("/_authenticated/parent/")({ component: Page });
 
@@ -62,6 +63,15 @@ function Page() {
               <span className="text-xs capitalize px-2 py-0.5 rounded-full" style={{ background: c.status === "active" ? "#dcfce7" : "#fee2e2", color: c.status === "active" ? "#166534" : "#991b1b" }}>{c.status}</span>
             </Link>
           ))}
+        </div>
+      </div>
+      <div className="rounded-2xl border bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b bg-muted/30 font-semibold text-sm flex items-center justify-between">
+          <span>🪪 Guardian Verification</span>
+        </div>
+        <div className="p-4">
+          <p className="text-xs text-muted-foreground mb-3">Upload your National ID and your child's birth certificate to become a verified guardian.</p>
+          <DocumentsPanel scope="parent" ownerRef={me.ref} categories={PARENT_DOC_CATEGORIES} canUpload={true} />
         </div>
       </div>
     </div>

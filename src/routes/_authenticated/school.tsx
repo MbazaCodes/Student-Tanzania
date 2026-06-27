@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PortalShell } from "@/components/tsid/portal-shell";
 import { useTheme } from "@/lib/theme";
-import { LayoutDashboard, Users, Settings, CheckSquare, Mail, GraduationCap } from "lucide-react";
+import { LayoutDashboard, Users, Settings, CheckSquare, Mail, GraduationCap, FolderOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/school")({
   component: () => {
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/school")({
         { to: "/school/teachers", label: "Teachers", icon: <GraduationCap className="h-4 w-4" /> },
         { to: "/school/approvals", label: "Approvals", icon: <CheckSquare className="h-4 w-4" /> },
         { to: "/school/letters", label: "Letter Requests", icon: <Mail className="h-4 w-4" /> },
+        { to: "/school/documents", label: "Documents", icon: <FolderOpen className="h-4 w-4" /> },
         { to: "/school/settings", label: t("nav_settings"),   icon: <Settings className="h-4 w-4" /> },
       ]} />
     );

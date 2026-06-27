@@ -73,3 +73,19 @@ GRANT SELECT, INSERT, DELETE ON public.documents TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
 SELECT 'Migration 039 complete — documents ready' AS result;
+
+-- Storage bucket for documents (run once; ignore if exists)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'documents', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Allow authenticated users to upload/read documents bucket
+DROP POLICY IF EXISTS "docs upload" ON storage.objects;
+CREATE POLICY "docs upload" ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'documents');
+DROP POLICY IF EXISTS "docs read" ON storage.objects;
+CREATE POLICY "docs read" ON storage.objects FOR SELECT TO public
+USING (bucket_id = 'documents');
+DROP POLICY IF EXISTS "docs delete" ON storage.objects;
+CREATE POLICY "docs delete" ON storage.objects FOR DELETE TO authenticated
+USING (bucket_id = 'documents');

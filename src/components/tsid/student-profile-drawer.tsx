@@ -17,6 +17,7 @@ import { CompletenessBanner } from "@/components/tsid/completeness-banner";
 import { PhotoUpload } from "@/components/tsid/photo-upload";
 import { DevelopmentPanel } from "@/components/tsid/development-panel";
 import { FieldAttachmentPanel } from "@/components/tsid/field-attachment-panel";
+import { DocumentsPanel, SCHOOL_DOC_CATEGORIES } from "@/components/tsid/documents-panel";
 import { isTertiary, EXAM_INDEX_FIELDS } from "@/lib/development";
 import { NATIONALITIES, RELATIONSHIPS, levelsForSchoolType } from "@/lib/tz-geo";
 
@@ -200,6 +201,13 @@ export function StudentProfileDrawer({ tsid, viewerRole, onClose, onChanged }: {
             {!editing && isTertiary({ schoolType: student.school_type, level: student.level }) && (
               <div className="mt-4 pt-4 border-t">
                 <FieldAttachmentPanel student={student} canEdit={isSchool || isGovAdmin} />
+              </div>
+            )}
+
+            {!editing && (
+              <div className="mt-4 pt-4 border-t">
+                <DocumentsPanel scope="student" tsid={student.tsid} schoolCode={student.school_code}
+                  categories={SCHOOL_DOC_CATEGORIES} canUpload={isSchool || isGovAdmin} title="Student Documents (results, etc.)" />
               </div>
             )}
 
