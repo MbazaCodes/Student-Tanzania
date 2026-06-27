@@ -51,19 +51,18 @@ $$;
 CREATE OR REPLACE FUNCTION public.search_school(p_q TEXT)
 RETURNS TABLE (
   school_code TEXT, school_name TEXT, type TEXT, region TEXT, district TEXT,
-  status TEXT, phone TEXT, school_contact TEXT, reg_number TEXT, category TEXT, fee_exempt BOOLEAN
+  status TEXT, phone TEXT, reg_number TEXT, category TEXT, fee_exempt BOOLEAN
 )
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT s.school_code, s.school_name, s.type, s.region, s.district,
-         s.status, s.phone, s.school_contact, s.reg_number, s.category, COALESCE(s.fee_exempt,false)
+         s.status, s.phone, s.reg_number, s.category, COALESCE(s.fee_exempt,false)
   FROM public.schools s
   WHERE p_q IS NOT NULL AND length(trim(p_q)) >= 2 AND (
        upper(s.school_code)  = upper(trim(p_q))
     OR s.school_name        ILIKE '%' || trim(p_q) || '%'
     OR upper(coalesce(s.reg_number,'')) = upper(trim(p_q))
-    OR regexp_replace(coalesce(s.phone,''), '\D','','g')          = regexp_replace(trim(p_q),'\D','','g')
-    OR regexp_replace(coalesce(s.school_contact,''), '\D','','g') = regexp_replace(trim(p_q),'\D','','g')
+    OR regexp_replace(coalesce(s.phone,''), '\D','','g') = regexp_replace(trim(p_q),'\D','','g')
   )
   ORDER BY (upper(s.school_code) = upper(trim(p_q))) DESC, s.school_name
   LIMIT 15;

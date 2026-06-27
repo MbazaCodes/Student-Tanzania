@@ -13,7 +13,7 @@ export function generateTsidNo() {
   return `TSID-${year}-${suffix}`;
 }
 
-export type Role = "admin" | "gov" | "gov_region" | "gov_district" | "school" | "student" | "parent";
+export type Role = "admin" | "gov" | "gov_region" | "gov_district" | "school" | "student" | "parent" | "teacher";
 
 /** Admin levels that use the /gov portal */
 export const GOV_ROLES: Role[] = ["admin", "gov", "gov_region", "gov_district"];
@@ -37,6 +37,7 @@ export function roleHome(role: Role | null | undefined): string {
   if (role === "school") return "/school";
   if (role === "student") return "/student";
   if (role === "parent") return "/parent";
+  if (role === "teacher") return "/teacher";
   return "/auth";
 }
 

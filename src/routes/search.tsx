@@ -168,7 +168,7 @@ function SearchPage() {
                   <Field label="Type" value={s.type ?? "—"} />
                   <Field label="Status" value={s.status ?? "—"} />
                   <Field label="Reg. Number" value={s.reg_number ?? "—"} />
-                  <Field label="Contact" value={s.phone || s.school_contact || "—"} />
+                  <Field label="Contact" value={s.phone || "—"} />
                   <Field label="Location" value={[s.district, s.region].filter(Boolean).join(", ") || "—"} />
                 </div>
               </div>
