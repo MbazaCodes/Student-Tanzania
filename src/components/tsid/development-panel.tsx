@@ -289,7 +289,18 @@ function DevForm({ student, existing, yearOptions, onDone, onCancel }: {
       ({ error } = await supabase.from("student_development").upsert(row, { onConflict: "tsid,year,term" }));
     }
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      if (/row-level security/i.test(error.message)) {
+        const { data: dbg } = await supabase.rpc("debug_teacher_access", { p_tsid: student.tsid });
+        console.log("ACCESS DEBUG:", dbg);
+        const a = dbg as any;
+        if (a && !a.admin_row) toast.error("Diagnosis: your login has no admin_users row.");
+        else if (a?.admin_row?.role === "teacher" && !a.can_access)
+          toast.error(`Diagnosis: no class assignment matches this student (student: ${a.student?.level ?? "?"} @ ${a.student?.school ?? "?"}; your classes: ${(a.assignments ?? []).map((x: any) => x.level).join(", ") || "none"}).`);
+      }
+      return;
+    }
     // Append-only audit trail
     await supabase.from("development_audit").insert({
       tsid: student.tsid, record_id: existing?.id ?? null, school_code: student.school_code,
